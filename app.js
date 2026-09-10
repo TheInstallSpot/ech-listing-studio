@@ -44,7 +44,7 @@
     if(step === 1 && !cond()){ toast('Choose the condition before going on'); return; }
     go(step+1);
   });
-  $$('.rail .st').forEach(function(s){ s.addEventListener('click', function(){ go(+s.dataset.step); }); });
+  $$('.rail .st').forEach(function(s){ s.addEventListener('click', function(){ var target=+s.dataset.step; if(step===1 && target>1 && !cond()){ toast('Choose the condition before going on'); return; } go(target); }); });
 
   /* =======================================================
      STEP 2 — PHOTOS  (badge stamping)
@@ -247,7 +247,9 @@
     // seed rows
     ['box','spec','ver'].forEach(function(k){ $('#'+k+'Rows').innerHTML=''; });
     if(s){
-      var r = document.querySelector('input[name=cond][value="'+s.cond+'"]'); if(r) r.checked=true;
+      var hasSavedProduct=!!(s.sku||s.productId||s.brand||s.part||s.what||s.title||s.pdesc);
+      var r = hasSavedProduct ? document.querySelector('input[name=cond][value="'+s.cond+'"]') : null; if(r) r.checked=true;
+      if(!hasSavedProduct) document.querySelectorAll('input[name=cond]').forEach(function(x){ x.checked=false; });
       $('#sku').value=s.sku||''; $('#productId').value=s.productId||'';
       $('#targetPrice').value=s.targetPrice||''; $('#shippingPlan').value=s.shippingPlan||'';
       $('#researchNotes').value=s.researchNotes||'';
