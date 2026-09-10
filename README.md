@@ -4,10 +4,11 @@ One installable app that does both jobs: **pick condition → stamp photos →
 write the eBay listing → copy it into eBay.** iPad-first, works offline once
 loaded, auto-saves the current item. Branded with the official ECH assets.
 
-This agent-ready copy adds a safe handoff queue without changing the original
-Paige app. An agent can prepare research and draft listing inputs in JSON;
-Paige imports the file, loads an item, chooses N1/O2/D3, and verifies the
-physical item. The queue does not publish to eBay or change any eBay setting.
+This agent-ready copy includes a secure approved-work queue. When Lee approves
+a researched product in the Business Hub, it appears automatically in Paige's
+app. Paige loads it, chooses N1/O2/D3, and verifies the physical item. The app
+retains an import-file fallback and continues working offline. The queue does
+not publish to eBay or change any eBay setting.
 
 The queue also enforces restricted-brand authorization. AudioQuest items are
 blocked unless the exact SKU appears in `authorization-registry.js`; the
@@ -18,7 +19,7 @@ denied by default.
 - `index.html`, `styles.css`, `app.js` — the app
 - `badges.js` — N1 / O2 / D3 badge images (from the Badge Stamper)
 - `builder-core.js` — the eBay title + description generator (from the Listing Builder — identical output)
-- `agent-queue.js` — imports researched items and exports Paige's current draft
+- `agent-queue.js` — syncs Lee-approved work, keeps it offline, and exports Paige's current draft
 - `authorization-registry.js` — exact-SKU approval gate for restricted brands
 - `priority-queue.initial.json` — six real ECH priority SKUs, deliberately blocked on physical verification
 - `prepared-items.sample.json` — one complete example for testing the handoff
@@ -30,12 +31,13 @@ Everything runs in the browser. No server, nothing leaves the device.
 
 ## First agent-assisted session
 
-1. Open the app and choose **Choose approved product**.
-2. Select `priority-queue.initial.json`.
+1. Open the one-time secure setup link on Paige's iPad.
+2. Tap **Sync approved work**, choose a waiting product, then **Start this product**.
 3. The app loads the approved product and returns Paige to the condition step.
 4. Paige selects N1, O2, or D3 and fills the physical-verification blanks.
 5. The normal photo, title, HTML, and copy-to-eBay workflow continues unchanged.
-6. After the listing work is finished, press **Finished with this product** to remove it from the queue.
+6. After the listing work is finished, press **Finished with this product** to
+   remove it locally and send the completed package back to Lee when online.
 
 Prices in the starter queue are references to the audited current ECH prices,
 not automatic pricing instructions. Lee approves price and shipping; Paige
