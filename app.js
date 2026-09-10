@@ -20,7 +20,7 @@
   var step = 1;
   var photos = []; // {name, img}
 
-  function cond(){ var r = $('input[name=cond]:checked'); return r ? r.value : "N1"; }
+  function cond(){ var r = $('input[name=cond]:checked'); return r ? r.value : ""; }
 
   /* =======================================================
      STEP NAVIGATION
@@ -41,6 +41,7 @@
   $('#navBack').addEventListener('click', function(){ go(step-1); });
   $('#navNext').addEventListener('click', function(){
     if(step === 4){ startOver(); return; }
+    if(step === 1 && !cond()){ toast('Choose the condition before going on'); return; }
     go(step+1);
   });
   $$('.rail .st').forEach(function(s){ s.addEventListener('click', function(){ go(+s.dataset.step); }); });
@@ -166,6 +167,9 @@
   function state(){
     return {
       cond: cond(),
+      sku:$('#sku').value.trim(), productId:$('#productId').value.trim(),
+      targetPrice:$('#targetPrice').value.trim(), shippingPlan:$('#shippingPlan').value.trim(),
+      researchNotes:$('#researchNotes').value.trim(),
       brand:$('#brand').value.trim(), part:$('#part').value.trim(),
       what:$('#what').value.trim(), sold:$('#sold').value.trim(),
       title:$('#headline').value.trim(), hook:$('#hook').value.trim(),
@@ -244,6 +248,9 @@
     ['box','spec','ver'].forEach(function(k){ $('#'+k+'Rows').innerHTML=''; });
     if(s){
       var r = document.querySelector('input[name=cond][value="'+s.cond+'"]'); if(r) r.checked=true;
+      $('#sku').value=s.sku||''; $('#productId').value=s.productId||'';
+      $('#targetPrice').value=s.targetPrice||''; $('#shippingPlan').value=s.shippingPlan||'';
+      $('#researchNotes').value=s.researchNotes||'';
       $('#brand').value=s.brand||''; $('#part').value=s.part||''; $('#what').value=s.what||'';
       $('#sold').value=s.sold||''; $('#headline').value=s.title||''; $('#hook').value=s.hook||'';
       $('#productdesc').value=s.pdesc||''; $('#mounting').value=s.mounting||'';
@@ -261,8 +268,8 @@
     if(!confirm('Start a fresh item? This clears the photos and the details.')) return;
     try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
     photos=[]; drawShots();
-    ['brand','part','what','sold','headline','hook','productdesc','mounting'].forEach(function(k){ $('#'+k).value=''; });
-    var r=document.querySelector('input[name=cond][value="N1"]'); if(r) r.checked=true;
+    ['sku','productId','targetPrice','shippingPlan','researchNotes','brand','part','what','sold','headline','hook','productdesc','mounting'].forEach(function(k){ $('#'+k).value=''; });
+    document.querySelectorAll('input[name=cond]').forEach(function(r){ r.checked=false; });
     ['box','spec','ver'].forEach(function(k){ $('#'+k+'Rows').innerHTML=''; });
     ['',''].forEach(function(t){ addRow('box',t); });
     SEED_SPEC.forEach(function(p){ addRow('spec',p[0],p[1]); });
@@ -278,6 +285,29 @@
   /* ---------- boot ---------- */
   restore();
   drawShots();
+
+  function loadPreparedItem(s){
+    s=s||{};
+    ['sku','productId','targetPrice','shippingPlan','researchNotes','brand','part','what','sold','mounting','hook'].forEach(function(k){
+      if($('#'+k)) $('#'+k).value=s[k]||'';
+    });
+    $('#headline').value=s.title||s.headline||'';
+    $('#productdesc').value=s.pdesc||s.productdesc||'';
+    document.querySelectorAll('input[name=cond]').forEach(function(r){ r.checked=false; });
+    ['box','spec','ver'].forEach(function(k){ $('#'+k+'Rows').innerHTML=''; });
+    (s.box&&s.box.length?s.box:['']).forEach(function(v){ addRow('box',v); });
+    (s.spec&&s.spec.length?s.spec:SEED_SPEC).forEach(function(v){ addRow('spec',v[0],v[1]); });
+    (s.ver&&s.ver.length?s.ver:['']).forEach(function(v){ addRow('ver',v); });
+    onChange(); drawShots(); go(1);
+  }
+  document.addEventListener('ech:loadPrepared', function(e){ loadPreparedItem(e.detail||{}); });
+  window.ECHStudio = {
+    getState: state,
+    loadPrepared: loadPreparedItem,
+    buildTitle: function(){ return CORE.ebayTitle(state()); },
+    buildHtml: function(){ return CORE.build(state()); },
+    problems: function(){ return CORE.problems(state()); }
+  };
   go(1);
 
   if('serviceWorker' in navigator){

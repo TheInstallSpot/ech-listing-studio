@@ -23,6 +23,26 @@
   <div class="masthead"><img src="masthead.png" alt="ECH — The Electronics Clearing House"></div>
   <p class="tagline">Listing Studio — photos &amp; eBay listings</p>
 
+  <section class="agent-queue" aria-labelledby="queueTitle">
+    <div class="agent-queue-head">
+      <div><span class="agent-kicker">Approved by Lee</span><h2 id="queueTitle">Paige's next product</h2></div>
+      <span class="queue-count" id="queueCount">0 ready</span>
+    </div>
+    <p class="agent-help"><b>Start here:</b> Choose the approved product file Lee gave you. The app will fill in the product details. You only check the item, choose its condition, and follow the four steps.</p>
+    <p class="authorization-note">If a product is not approved, the app will stop it and tell you to ask Lee.</p>
+    <div class="queue-controls">
+      <select id="preparedSelect" aria-label="Prepared items"><option value="">No prepared items yet</option></select>
+      <button class="queue-load" id="loadPrepared" type="button" disabled>Start this product</button>
+    </div>
+    <div class="queue-actions">
+      <button id="importPrepared" type="button">Choose approved product</button>
+      <button id="exportPackage" type="button">Save finished listing</button>
+      <button id="completePrepared" type="button" disabled>Finished with this product</button>
+    </div>
+    <input id="preparedFile" type="file" accept="application/json,.json" hidden>
+    <p class="queue-status" id="queueStatus" role="status"></p>
+  </section>
+
   <div class="rail">
     <div class="st" data-step="1"><span class="n">1</span><br>Condition</div>
     <div class="st" data-step="2"><span class="n">2</span><br>Photos</div>
@@ -35,7 +55,7 @@
     <h2>Pick the condition</h2>
     <p class="lead">Choose one. It sets the badge on the photos and the listing — so you only pick it once.</p>
     <div class="conds">
-      <label class="cond n1"><input type="radio" name="cond" value="N1" checked>
+      <label class="cond n1"><input type="radio" name="cond" value="N1">
         <span class="code">N1</span><span class="cd"><b>New</b><span>Still sealed. Never opened.</span></span><span class="tick"></span></label>
       <label class="cond o2"><input type="radio" name="cond" value="O2">
         <span class="code">O2</span><span class="cd"><b>Open box</b><span>Box open, item complete and like new.</span></span><span class="tick"></span></label>
@@ -81,6 +101,17 @@
   <section class="panel" data-step="3" id="panel-details">
     <h2>Write the listing</h2>
     <p class="lead">Fill in the boxes. The green “Ready” message tells you when you’re done.</p>
+
+    <div class="sec">Agent research</div>
+    <div class="two">
+      <div class="f"><label>SKU</label><input type="text" id="sku" placeholder="KEF-CI160ER"></div>
+      <div class="f"><label>UPC / MPN</label><input type="text" id="productId" placeholder="Product identifier"></div>
+    </div>
+    <div class="two">
+      <div class="f"><label>Target price</label><input type="text" id="targetPrice" placeholder="$249.99"></div>
+      <div class="f"><label>Shipping plan</label><input type="text" id="shippingPlan" placeholder="Free shipping / calculated"></div>
+    </div>
+    <div class="f"><label>Research notes</label><textarea id="researchNotes" placeholder="Market range, confidence, and anything Lee should review."></textarea></div>
 
     <div class="sec">The eBay title</div>
     <div class="two">
@@ -154,5 +185,7 @@
 <script src="badges.js"></script>
 <script src="builder-core.js"></script>
 <script src="app.js"></script>
+<script src="authorization-registry.js"></script>
+<script src="agent-queue.js"></script>
 </body>
 </html>
