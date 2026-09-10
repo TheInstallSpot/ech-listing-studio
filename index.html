@@ -28,14 +28,15 @@
       <div><span class="agent-kicker">Approved by Lee</span><h2 id="queueTitle">Paige's next product</h2></div>
       <span class="queue-count" id="queueCount">0 ready</span>
     </div>
-    <p class="agent-help"><b>Start here:</b> Choose the approved product file Lee gave you. The app will fill in the product details. You only check the item, choose its condition, and follow the four steps.</p>
+    <p class="agent-help"><b>Start here:</b> Tap <b>Sync approved work</b>. Products Lee approves appear here automatically. Pick one, choose its condition, and follow the four steps.</p>
     <p class="authorization-note">If a product is not approved, the app will stop it and tell you to ask Lee.</p>
     <div class="queue-controls">
       <select id="preparedSelect" aria-label="Prepared items"><option value="">No prepared items yet</option></select>
       <button class="queue-load" id="loadPrepared" type="button" disabled>Start this product</button>
     </div>
     <div class="queue-actions">
-      <button id="importPrepared" type="button">Choose approved product</button>
+      <button class="queue-sync" id="syncApprovals" type="button">Sync approved work</button>
+      <button id="importPrepared" type="button">Import backup file</button>
       <button id="exportPackage" type="button">Save finished listing</button>
       <button id="completePrepared" type="button" disabled>Finished with this product</button>
     </div>
