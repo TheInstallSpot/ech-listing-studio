@@ -7,7 +7,7 @@ function esc(s){
   // ---------------- repeatable rows
   var CONDS = {
     N1:{label:"New \u00b7 Factory sealed", tagBg:"#1839B4", border:"#1839B4", text:"#1839B4"},
-    O2:{label:"Open box \u00b7 Complete",  tagBg:"#0F1318", border:"#22282F", text:"#22282F"},
+    O2:{label:"Used \u00b7 Opened gear",  tagBg:"#0F1318", border:"#22282F", text:"#22282F"},
     D3:{label:"Dealer demo \u00b7 Tested", tagBg:"#7C5F22", border:"#7C5F22", text:"#7C5F22"}
   };
 
@@ -29,7 +29,7 @@ function esc(s){
   <h2 style="margin:0 0 12px;padding:0 0 8px;border-bottom:2px solid #14181D;font-family:Futura,'Century Gothic','Trebuchet MS',Verdana,sans-serif;font-weight:bold;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#14181D;">About us</h2>
   <p style="margin:0 0 14px;font-size:15.5px;line-height:1.6;">Enthusiasm, passion and delivery were trademarks of The Electronics Clearing House long before it was founded in 2006. We didn't set out to never be outdone, or to offer the lowest price. We set out to provide the right balance of performance, quality and value.</p>
   <p style="margin:0 0 14px;font-size:15.5px;line-height:1.6;">Our process isn't about maximising what you spend. It's about getting you the solution you actually need and being a good steward of your money &mdash; with the outcome that you're satisfied.</p>
-  <p style="margin:0 0 28px;font-size:15.5px;line-height:1.6;">As a custom-installation dealer, everything we list comes through authorised distribution, showroom demo or overstock. Every unit is bench-tested and photographed before it goes up. To us this isn't work &mdash; it's what we're passionate about.</p>
+  <p style="margin:0 0 28px;font-size:15.5px;line-height:1.6;">As a custom-installation dealer, our inventory comes through authorized distribution, ECH-owned stock, showroom demo or overstock. We describe the condition, box contents and fulfillment for each listing individually so you know what you are buying.</p>
 
   
   <h2 style="margin:0 0 16px;padding:0 0 8px;border-bottom:2px solid #14181D;font-family:Futura,'Century Gothic','Trebuchet MS',Verdana,sans-serif;font-weight:bold;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#14181D;">What our customers say</h2>
@@ -56,12 +56,12 @@ function esc(s){
   <p style="margin:0 0 24px;font-size:15px;line-height:1.6;">All major credit and debit cards, plus every payment method eBay offers at checkout. Message us if you need anything clarified before buying.</p>
 
   <h2 style="margin:0 0 12px;padding:0 0 8px;border-bottom:2px solid #14181D;font-family:Futura,'Century Gothic','Trebuchet MS',Verdana,sans-serif;font-weight:bold;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#14181D;">Returns</h2>
-  <p style="margin:0 0 12px;font-size:15px;line-height:1.6;"><strong>30 days, no restocking fee.</strong> If it isn't right, send it back. That applies to open-box and dealer-demo stock the same as sealed &mdash; we grade honestly up front so there are no surprises.</p>
+  <p style="margin:0 0 12px;font-size:15px;line-height:1.6;"><strong>30 days, no restocking fee.</strong> If it isn't right, send it back. That applies to used and dealer-demo stock the same as sealed &mdash; we grade honestly up front so there are no surprises.</p>
   <p style="margin:0 0 24px;font-size:15px;line-height:1.6;">If anything is wrong with your order, message us before opening a case. We will sort it out.</p>
 
   <h2 style="margin:0 0 12px;padding:0 0 8px;border-bottom:2px solid #14181D;font-family:Futura,'Century Gothic','Trebuchet MS',Verdana,sans-serif;font-weight:bold;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#14181D;">Shipping</h2>
-  <p style="margin:0 0 12px;font-size:15px;line-height:1.6;"><strong>Free shipping on all of our products, excluding local pickup items.</strong> Oversized pieces &mdash; large subwoofers and similar &mdash; are pickup only, and the listing will say so clearly.</p>
-  <p style="margin:0 0 26px;font-size:15px;line-height:1.6;">Everything ships tracked and insured, double-boxed, same business day where possible. Weather and carrier delays are outside our control, but we will keep you informed.</p>
+  <p style="margin:0 0 12px;font-size:15px;line-height:1.6;"><strong>Shipping cost, method and handling time are shown in this eBay listing.</strong> Oversized pieces &mdash; large subwoofers and similar &mdash; may be pickup only, and the listing will say so clearly.</p>
+  <p style="margin:0 0 26px;font-size:15px;line-height:1.6;">Tracking is provided for shipped orders. Weather and carrier delays are outside our control, but we will keep you informed.</p>
 
   
   <div style="margin:0;padding:20px 20px 24px;background:#14181D;color:#EDEEEA;">
@@ -79,7 +79,7 @@ function esc(s){
   function build(s){
     var c = CONDS[s.cond], o = [];
 
-    o.push('<div style="max-width:700px;margin:0 auto;padding:22px 18px 24px;background-color:#ffffff;font-family:'+F_BODY+
+    o.push('<div style="width:96%;max-width:1080px;margin:0 auto;padding:22px 18px 24px;background-color:#ffffff;font-family:'+F_BODY+
            ';font-size:16px;line-height:1.6;color:#14181D;">');
 
     o.push('\n  <div style="margin:0 0 20px;">');
@@ -155,7 +155,9 @@ function esc(s){
   }
 
   function ebayTitle(s){
-    return [s.brand, s.part, s.what, s.sold].filter(Boolean).join(" ") + (s.cond ? " ("+s.cond+")" : "");
+    var condition={N1:"New",O2:"Used",D3:"Dealer Demo"}[s.cond]||"";
+    var what=String(s.what||"").replace(/(\d+(?:\.\d+)?)-inch\b/gi,"$1 in");
+    return [s.brand,s.part,what,condition,s.sold,s.cond?"("+s.cond+")":""].filter(Boolean).join(" ").replace(/\s+/g," ").trim();
   }
 
   function problems(s){
@@ -164,6 +166,7 @@ function esc(s){
     if(!s.part)  p.push("part number");
     if(!s.hook)  p.push("hook");
     if(!s.sold)  p.push("sold as");
+    else if(!/^(Each|Pair of 2|Set of \d+|\d+-Pack)$/i.test(String(s.sold).trim())) p.push("valid sale unit");
     if(!s.box.length) p.push("at least one box item");
     if(!s.ver.length) p.push("at least one verified line");
     return p;

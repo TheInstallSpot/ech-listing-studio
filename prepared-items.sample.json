@@ -6,8 +6,8 @@
       "productId": "Ci160ER",
       "brand": "KEF",
       "part": "Ci160ER",
-      "what": "6.5-inch In-Ceiling Speakers",
-      "sold": "Pair",
+      "what": "6.5 in In-Ceiling Speakers",
+      "sold": "Pair of 2",
       "title": "KEF Ci160ER 6.5-inch In-Ceiling Speakers — Pair",
       "mounting": "In-ceiling",
       "hook": "A compact architectural speaker pair prepared for physical verification before listing.",
@@ -16,6 +16,12 @@
       "ver": ["Paige: confirm seals, contents and cosmetic condition"],
       "pdesc": "Prepared from catalog and market research. Update this section with item-specific observations before publishing.",
       "targetPrice": "$249.99",
+      "unitCost": "REPLACE WITH VERIFIED COST",
+      "availableQuantity": 1,
+      "fulfillment": "ech",
+      "isPassive": true,
+      "compatibilityNote": "Confirm amplifier compatibility, cutout size, mounting depth, wiring, and project quantity before ordering.",
+      "catalogNote": "Exact model and pair quantity must be verified before publication.",
       "shippingPlan": "Free shipping — verify carton weight and margin",
       "researchNotes": "High-priority ECH SKU. Agent values are a draft; Lee approves price and Paige verifies the physical item."
     }

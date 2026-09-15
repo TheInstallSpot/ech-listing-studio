@@ -1,7 +1,7 @@
 {
   "name": "ECH Listing Studio",
   "short_name": "ECH Studio",
-  "description": "Stamp photos and build eBay listings for The Electronics Clearing House.",
+  "description": "Prepare clean photos and review-ready eBay listings for The Electronics Clearing House.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

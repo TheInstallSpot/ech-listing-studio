@@ -1,6 +1,6 @@
 /* ECH Listing Studio service worker — offline cache.
    Bump CACHE when you change any file so devices pull the new version. */
-var CACHE = 'ech-studio-agent-v6';
+var CACHE = 'ech-studio-agent-v7';
 var ASSETS = [
   './',
   './index.html',
@@ -8,7 +8,6 @@ var ASSETS = [
   './app.js',
   './authorization-registry.js',
   './agent-queue.js',
-  './badges.js',
   './builder-core.js',
   './manifest.webmanifest',
   './icon-192.png',

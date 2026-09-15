@@ -1,14 +1,18 @@
 # ECH Listing Studio
 
-One installable app that does both jobs: **pick condition → stamp photos →
-write the eBay listing → copy it into eBay.** iPad-first, works offline once
-loaded, auto-saves the current item. Branded with the official ECH assets.
+One installable app that does both jobs: **pick condition → prepare clean photos →
+check the eBay listing → send it to Lee.** iPad-first, works offline once
+loaded, auto-saves the current item, and uses the official ECH assets.
 
-This agent-ready copy includes a secure approved-work queue. When Lee approves
-a researched product in the Business Hub, it appears automatically in Paige's
-app. Paige loads it, chooses N1/O2/D3, and verifies the physical item. The app
-retains an import-file fallback and continues working offline. The queue does
-not publish to eBay or change any eBay setting.
+An agent can prepare research and draft listing inputs for Paige's queue.
+Paige loads an approved item, chooses N1/O2/D3 from the physical item, adds
+photos, and sends a review to Lee. The queue does not publish to eBay or
+change any eBay setting.
+
+Photos are normalized into plain RGB JPEGs, scaled down to 2000 pixels on the
+long side when needed, and named from the SKU. The app never adds a badge,
+logo, text, border, or watermark to an eBay photo. Images below the recommended
+1600-pixel long side remain usable but show a clear warning.
 
 The queue also enforces restricted-brand authorization. AudioQuest items are
 blocked unless the exact SKU appears in `authorization-registry.js`; the
@@ -17,9 +21,10 @@ denied by default.
 
 ## What's in here
 - `index.html`, `styles.css`, `app.js` — the app
-- `badges.js` — N1 / O2 / D3 badge images (from the Badge Stamper)
-- `builder-core.js` — the eBay title + description generator (from the Listing Builder — identical output)
-- `agent-queue.js` — syncs Lee-approved work, keeps it offline, and exports Paige's current draft
+- `builder-core.js` — the ECH-standard eBay title and branded description generator
+- `agent-queue.js` — loads researched items and sends Paige's review
+- `review-config.js` — the public secure Business Hub receiver URL; never stores eBay secrets
+- `BUSINESS_HUB_INTEGRATION.md` — the secure receiver and Lee-approval contract for the dashboard project
 - `authorization-registry.js` — exact-SKU approval gate for restricted brands
 - `priority-queue.initial.json` — six real ECH priority SKUs, deliberately blocked on physical verification
 - `prepared-items.sample.json` — one complete example for testing the handoff
@@ -27,17 +32,21 @@ denied by default.
 - `masthead.png`, `icon-*.png`, `apple-touch-icon.png`, `favicon.ico`, `favicon-32.png` — ECH brand art
 - `manifest.webmanifest`, `sw.js`, `.nojekyll`
 
-Everything runs in the browser. No server, nothing leaves the device.
+The secure Business Hub receiver is configured. Lee’s one-time device setup
+link connects the approved-work queue and carries a short-lived, single-use
+review token for each exact SKU. **Send to Lee** posts the listing JSON and
+ordered JPEGs to the secure receiver. If the receiver is intentionally removed,
+the app falls back to the Share sheet or a local save. It never publishes to eBay.
 
 ## First agent-assisted session
 
-1. Open the one-time secure setup link on Paige's iPad.
-2. Tap **Sync approved work**, choose a waiting product, then **Start this product**.
-3. The app loads the approved product and returns Paige to the condition step.
+1. Lee opens **Set up Paige’s device** once from the Business Hub.
+2. Paige taps **Sync approved work** and chooses a product Lee approved.
+3. The app loads the product and returns Paige to the condition step.
 4. Paige selects N1, O2, or D3 and fills the physical-verification blanks.
-5. The normal photo, title, HTML, and copy-to-eBay workflow continues unchanged.
-6. After the listing work is finished, press **Finished with this product** to
-   remove it locally and send the completed package back to Lee when online.
+5. Add the exact-item photos. The app prepares clean `.jpeg` files automatically.
+6. Press **Send to Lee for approval**. Nothing is published to eBay.
+7. A successful submission leaves Paige’s queue and appears in Lee’s unpublished review inbox.
 
 Prices in the starter queue are references to the audited current ECH prices,
 not automatic pricing instructions. Lee approves price and shipping; Paige

@@ -61,6 +61,9 @@ body{
 .bigbtn.primary{background:var(--blue);color:#fff}
 .bigbtn.ghost{background:#fff;color:var(--ink);border:2.5px solid var(--line)}
 .bigbtn svg{width:22px;height:22px}
+.photo-summary{margin:14px 0 0;padding:11px 14px;border-radius:9px;background:#fff;border-left:5px solid var(--line);font-size:14.5px;font-weight:600;color:var(--soft)}
+.photo-summary.ready-photo{background:var(--green-soft);border-left-color:var(--green);color:var(--green)}
+.photo-summary.warn-photo{background:var(--gold-soft);border-left-color:var(--gold);color:#6B5200}
 .adjust{margin:14px 0 0;border:1.5px solid var(--line);border-radius:12px;background:#fff;padding:0 14px}
 .adjust summary{cursor:pointer;font-weight:600;padding:13px 0;font-size:15.5px;list-style:none}
 .adjust summary::-webkit-details-marker{display:none}
@@ -83,7 +86,10 @@ input[type=range]{accent-color:var(--blue);height:34px}
 .shot .flag .ok{color:var(--green);font-weight:600}
 .shot .flag .bad{color:var(--red);font-weight:700}
 .shot .savehint{font-size:13px;color:var(--soft);margin:0 0 9px}
-.shot .save1{width:100%;min-height:48px;border:none;border-radius:9px;background:var(--green);color:#fff;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer}
+.photo-card-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.shot .save1,.shot .remove1{min-height:48px;border:none;border-radius:9px;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer}
+.shot .save1{background:var(--green);color:#fff}
+.shot .remove1{background:#F0F1ED;color:var(--soft);padding:0 15px}
 .empty{border:2px dashed var(--line);border-radius:12px;padding:26px;text-align:center;color:var(--soft);font-size:15px}
 
 /* ---------- details form ---------- */
@@ -113,6 +119,15 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue);bo
 .banner.good b{color:var(--green)}
 
 /* ---------- finish step ---------- */
+.send-review{width:100%;min-height:72px;border:none;border-radius:13px;background:var(--green);color:#fff;font-family:inherit;font-weight:800;font-size:19px;cursor:pointer;box-shadow:0 5px 14px rgba(47,122,79,.22)}
+.send-review:disabled{opacity:.55;cursor:wait}
+.handoff-status{margin:12px 0 18px;padding:12px 14px;border-radius:10px;background:#fff;border-left:5px solid var(--blue);font-size:14px;color:var(--soft)}
+.handoff-status.handoff-good{background:var(--green-soft);border-left-color:var(--green);color:var(--green);font-weight:650}
+.handoff-status.handoff-error{background:var(--red-soft);border-left-color:var(--red);color:var(--red);font-weight:650}
+.manual-fallback{margin:18px 0 0;border:1.5px solid var(--line);border-radius:12px;background:#fff;padding:0 14px}
+.manual-fallback summary{cursor:pointer;font-weight:650;padding:13px 0;font-size:14.5px;color:var(--soft)}
+.manual-fallback .manual-body{padding:2px 0 14px}
+.manual-fallback .manual-body p{margin:3px 0 0;color:var(--soft);font-size:13px}
 .copybtn{width:100%;min-height:66px;border:none;border-radius:13px;font-family:inherit;font-weight:700;font-size:17px;cursor:pointer;margin:0 0 12px;display:flex;align-items:center;justify-content:center;gap:10px;color:#fff}
 .copybtn.title{background:var(--dark)}
 .copybtn.desc{background:var(--blue)}
@@ -140,5 +155,5 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue);bo
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 /* Agent-prepared work queue */
 .agent-queue{background:#fff;border:2px solid #1E45D8;border-radius:14px;padding:16px;margin:14px 0 18px;box-shadow:0 2px 8px rgba(20,24,29,.08)}
-.agent-queue-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.agent-queue h2{margin:2px 0 0;font-size:21px}.agent-kicker{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:#1E45D8;font-weight:800}.queue-count{background:#E7ECFC;color:#1E45D8;border-radius:999px;padding:5px 10px;font-size:13px;font-weight:800;white-space:nowrap}.agent-help{font-size:14px;color:#4A5158;margin:10px 0 12px}.queue-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}.queue-controls select{min-width:0;border:1.5px solid #BFC3C7;border-radius:9px;padding:11px;background:#fff;font:inherit}.queue-load,.queue-actions button{border:0;border-radius:9px;padding:10px 13px;font:inherit;font-weight:750;cursor:pointer}.queue-load{background:#1E45D8;color:#fff}.queue-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.queue-actions button{background:#F0F1ED;color:#14181D}.queue-actions .queue-sync{background:#1E45D8;color:#fff}.queue-actions button:last-of-type{background:#E7F3EC;color:#2F7A4F}.queue-load:disabled,.queue-actions button:disabled{opacity:.45;cursor:not-allowed}.queue-status{min-height:20px;margin:8px 0 0;font-size:13px;color:#2F7A4F;font-weight:700}@media(max-width:520px){.queue-controls{grid-template-columns:1fr}.queue-actions button{flex:1 1 44%}}
+.agent-queue-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.agent-queue h2{margin:2px 0 0;font-size:21px}.agent-kicker{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:#1E45D8;font-weight:800}.queue-count{background:#E7ECFC;color:#1E45D8;border-radius:999px;padding:5px 10px;font-size:13px;font-weight:800;white-space:nowrap}.agent-help{font-size:14px;color:#4A5158;margin:10px 0 12px}.queue-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}.queue-controls select{min-width:0;border:1.5px solid #BFC3C7;border-radius:9px;padding:11px;background:#fff;font:inherit}.queue-load,.queue-actions button{border:0;border-radius:9px;padding:10px 13px;font:inherit;font-weight:750;cursor:pointer}.queue-load{background:#1E45D8;color:#fff}.queue-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.queue-actions button{background:#F0F1ED;color:#14181D}.queue-actions button:last-of-type{background:#E7F3EC;color:#2F7A4F}.queue-load:disabled,.queue-actions button:disabled{opacity:.45;cursor:not-allowed}.queue-status{min-height:20px;margin:8px 0 0;font-size:13px;color:#2F7A4F;font-weight:700}@media(max-width:520px){.queue-controls{grid-template-columns:1fr}.queue-actions button{flex:1 1 44%}}
 .authorization-note{font-size:12px;line-height:1.35;background:#FFF2CC;color:#6B5200;border-left:4px solid #D6A800;border-radius:5px;padding:8px 10px;margin:-4px 0 12px}.queue-blocked{color:#B03A3A}

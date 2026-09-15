@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ECH Listing Studio</title>
-<meta name="description" content="Stamp photos and build eBay listings for The Electronics Clearing House.">
+<meta name="description" content="Prepare clean photos and review-ready eBay listings for The Electronics Clearing House.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#14181D">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -28,7 +28,7 @@
       <div><span class="agent-kicker">Approved by Lee</span><h2 id="queueTitle">Paige's next product</h2></div>
       <span class="queue-count" id="queueCount">0 ready</span>
     </div>
-    <p class="agent-help"><b>Start here:</b> Tap <b>Sync approved work</b>. Products Lee approves appear here automatically. Pick one, choose its condition, and follow the four steps.</p>
+    <p class="agent-help"><b>Start here:</b> Pick the approved product below. The details are filled in for you. You only check the item, choose its condition, add the photos, and send it to Lee.</p>
     <p class="authorization-note">If a product is not approved, the app will stop it and tell you to ask Lee.</p>
     <div class="queue-controls">
       <select id="preparedSelect" aria-label="Prepared items"><option value="">No prepared items yet</option></select>
@@ -36,11 +36,17 @@
     </div>
     <div class="queue-actions">
       <button class="queue-sync" id="syncApprovals" type="button">Sync approved work</button>
-      <button id="importPrepared" type="button">Import backup file</button>
-      <button id="exportPackage" type="button">Save finished listing</button>
-      <button id="completePrepared" type="button" disabled>Finished with this product</button>
+      <button id="importPrepared" type="button">Add products from Lee</button>
+      <button id="completePrepared" type="button" disabled>Remove from my list</button>
     </div>
     <input id="preparedFile" type="file" accept="application/json,.json" hidden>
+    <input id="unitCost" type="hidden">
+    <input id="availableQuantity" type="hidden">
+    <input id="fulfillment" type="hidden">
+    <input id="reviewToken" type="hidden">
+    <input id="isPassive" type="hidden">
+    <input id="compatibilityNote" type="hidden">
+    <input id="catalogNote" type="hidden">
     <p class="queue-status" id="queueStatus" role="status"></p>
   </section>
 
@@ -54,12 +60,12 @@
   <!-- STEP 1 : CONDITION -->
   <section class="panel" data-step="1">
     <h2>Pick the condition</h2>
-    <p class="lead">Choose one. It sets the badge on the photos and the listing — so you only pick it once.</p>
+    <p class="lead">Choose one from the item in front of you. The app uses it in the title and listing, but never puts it on the photos.</p>
     <div class="conds">
       <label class="cond n1"><input type="radio" name="cond" value="N1">
         <span class="code">N1</span><span class="cd"><b>New</b><span>Still sealed. Never opened.</span></span><span class="tick"></span></label>
       <label class="cond o2"><input type="radio" name="cond" value="O2">
-        <span class="code">O2</span><span class="cd"><b>Open box</b><span>Box open, item complete and like new.</span></span><span class="tick"></span></label>
+        <span class="code">O2</span><span class="cd"><b>Used</b><span>The box has been opened. Treat the item as used.</span></span><span class="tick"></span></label>
       <label class="cond d3"><input type="radio" name="cond" value="D3">
         <span class="code">D3</span><span class="cd"><b>Dealer demo</b><span>We used or tested it. Works, fully checked.</span></span><span class="tick"></span></label>
     </div>
@@ -69,7 +75,7 @@
   <!-- STEP 2 : PHOTOS -->
   <section class="panel" data-step="2">
     <h2>Add the photos</h2>
-    <p class="lead">The badge is added for you. Take clear photos in good light on a plain background.</p>
+    <p class="lead">Add clear photos in good light on a plain background. The app makes clean eBay-ready JPEGs automatically.</p>
     <div class="photo-btns">
       <button class="bigbtn primary" id="takePhoto" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -81,21 +87,10 @@
     <input type="file" id="camIn" accept="image/*" capture="environment" hidden>
     <input type="file" id="libIn" accept="image/*" multiple hidden>
 
-    <details class="adjust">
-      <summary>Adjust badge position</summary>
-      <div class="body">
-        <div class="field-row"><label>Corner</label>
-          <select id="corner"><option value="tl" selected>Top left</option><option value="tr">Top right</option><option value="bl">Bottom left</option><option value="br">Bottom right</option></select></div>
-        <div class="field-row"><label>Badge size <b id="szv" style="float:right;color:#5E5A52;font-weight:600">30%</b></label>
-          <input type="range" id="size" min="14" max="52" value="30"></div>
-        <div class="field-row"><label>Distance from edge <b id="mgv" style="float:right;color:#5E5A52;font-weight:600">3.5%</b></label>
-          <input type="range" id="margin" min="0" max="100" value="35"></div>
-      </div>
-    </details>
-
+    <div class="photo-summary" id="photoSummary" role="status">Add at least one exact-product photo.</div>
     <div class="shots" id="shots"></div>
     <button class="startover" id="clearPhotos" type="button" style="margin-top:16px">Remove all photos</button>
-    <div class="tip"><b>On iPad:</b> press and hold a finished photo, then tap <b>Save to Photos</b> — that puts it in your camera roll ready to add in eBay.</div>
+    <div class="tip"><b>Remember:</b> The first photo is the main eBay photo. Make sure it shows the exact model, color, and everything included.</div>
   </section>
 
   <!-- STEP 3 : DETAILS -->
@@ -121,7 +116,7 @@
     </div>
     <div class="two">
       <div class="f"><label>What it is</label><input type="text" id="what" placeholder="In-Wall Speaker"></div>
-      <div class="f"><label>Sold as</label><input type="text" id="sold" placeholder="Each or Pair"></div>
+      <div class="f"><label>Sold as</label><input type="text" id="sold" placeholder="Each or Pair of 2"></div>
     </div>
     <div class="f"><label>Your title (made for you)</label><input type="text" id="titlePreview" readonly><div class="count" id="titleCount">0 / 80</div></div>
 
@@ -136,7 +131,7 @@
     <div class="rows" id="boxRows"></div>
     <button class="addrow" data-add="box" type="button">+ Add a line</button>
 
-    <div class="sec">Specification</div>
+    <div class="sec">Verified product facts</div>
     <div class="rows" id="specRows"></div>
     <button class="addrow" data-add="spec" type="button">+ Add a spec</button>
 
@@ -153,19 +148,20 @@
 
   <!-- STEP 4 : FINISH -->
   <section class="panel" data-step="4">
-    <h2>Put it on eBay</h2>
-    <p class="lead">Copy each part and paste it into eBay.</p>
+    <h2>Send it to Lee</h2>
+    <p class="lead">The app checks everything first. Nothing is published to eBay from this button.</p>
 
-    <button class="copybtn desc" id="copyDesc" type="button" data-label="Copy description (HTML)"><span class="lbl">Copy description (HTML)</span></button>
-    <button class="copybtn title" id="copyTitle" type="button" data-label="Copy title"><span class="lbl">Copy title</span></button>
+    <button class="send-review" id="sendToLee" type="button">Send to Lee for approval</button>
+    <div class="handoff-status" id="handoffStatus" role="status">Lee will still review the condition, photos, price, quantity, and listing before it goes live.</div>
 
-    <ol class="steps-final">
-      <li>In eBay, open the description, switch to the <b>HTML view</b>, and paste the description.</li>
-      <li>Paste the <b>title</b> into the eBay title box.</li>
-      <li>Add your <b>saved photos</b> to the listing.</li>
-      <li>Set the <b>price</b> and <b>shipping</b>. Not sure? Ask Lee.</li>
-      <li>Look it over, then <b>list it</b>. Move the item to the finished shelf.</li>
-    </ol>
+    <details class="manual-fallback">
+      <summary>Manual eBay tools — only if Lee asks</summary>
+      <div class="manual-body">
+        <button class="copybtn desc" id="copyDesc" type="button" data-label="Copy description (HTML)"><span class="lbl">Copy description (HTML)</span></button>
+        <button class="copybtn title" id="copyTitle" type="button" data-label="Copy title"><span class="lbl">Copy title</span></button>
+        <p>The clean `.jpeg` photo buttons are in Step 2.</p>
+      </div>
+    </details>
 
     <div class="ask">
       <h3>⚠  When you are not sure</h3>
@@ -183,10 +179,10 @@
   <button class="next" id="navNext" type="button">Next  →</button>
 </div></nav>
 
-<script src="badges.js"></script>
 <script src="builder-core.js"></script>
 <script src="app.js"></script>
 <script src="authorization-registry.js"></script>
+<script src="review-config.js"></script>
 <script src="agent-queue.js"></script>
 </body>
 </html>

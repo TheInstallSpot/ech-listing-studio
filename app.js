@@ -1,20 +1,12 @@
-/* ECH Listing Studio — merged Badge Stamper + Listing Builder, iPad-first PWA.
-   Reuses window.ECH_BADGE (badge images) and window.ECHCore (listing HTML generator),
-   both extracted verbatim from the original tools so output is identical. */
+/* ECH Listing Studio — clean-photo and listing-review workflow, iPad-first PWA. */
 (function(){
   "use strict";
   var $ = function(s,r){ return (r||document).querySelector(s); };
   var $$ = function(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); };
-  var BADGE = window.ECH_BADGE, CORE = window.ECHCore;
+  var CORE = window.ECHCore;
   var SAVE_KEY = "ech-studio-v1";
-
-  /* ---------- badge image preload ---------- */
-  var badgeImg = {}, badgeReady = {};
-  Object.keys(BADGE).forEach(function(k){
-    var im = new Image();
-    im.onload = function(){ badgeReady[k] = true; drawShots(); };
-    im.src = BADGE[k]; badgeImg[k] = im;
-  });
+  var MAX_PHOTO_SIDE = 2000;
+  var MIN_RECOMMENDED_SIDE = 1600;
 
   /* ---------- shared state ---------- */
   var step = 1;
@@ -47,65 +39,82 @@
   $$('.rail .st').forEach(function(s){ s.addEventListener('click', function(){ var target=+s.dataset.step; if(step===1 && target>1 && !cond()){ toast('Choose the condition before going on'); return; } go(target); }); });
 
   /* =======================================================
-     STEP 2 — PHOTOS  (badge stamping)
+     STEP 2 — PHOTOS  (clean JPEG normalization)
   ======================================================= */
-  function cornerBusy(cv, x, y, w, h){
-    try{
-      var d = cv.getContext('2d').getImageData(Math.max(0,x), Math.max(0,y),
-                Math.min(w, cv.width-x), Math.min(h, cv.height-y)).data;
-      var n = d.length/4, sum=0, sq=0;
-      for(var i=0;i<d.length;i+=4){ var l=(d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114); sum+=l; sq+=l*l; }
-      var mean=sum/n;
-      return Math.sqrt(Math.max(sq/n - mean*mean,0)) > 46;
-    }catch(e){ return false; }
+  function safeNamePiece(value){
+    return String(value||'ECH-item').trim().replace(/[^A-Za-z0-9._-]+/g,'-').replace(/^-+|-+$/g,'') || 'ECH-item';
   }
 
-  function stamp(f){ // returns {dataUrl, w, h, small, busy}
-    var c = cond(); var badge = badgeImg[c];
+  function photoName(index){
+    var sku = ($('#sku') && $('#sku').value) || ($('#part') && $('#part').value) || 'ECH-item';
+    return safeNamePiece(sku) + '-' + String(index+1).padStart(2,'0') + (index===0?'-main':'') + '.jpeg';
+  }
+
+  function normalizePhoto(f){ // returns a plain RGB JPEG with no added text or artwork
+    var sourceW=f.img.naturalWidth, sourceH=f.img.naturalHeight;
+    var longest=Math.max(sourceW,sourceH);
+    var scale=longest>MAX_PHOTO_SIDE?MAX_PHOTO_SIDE/longest:1;
     var cv = document.createElement('canvas');
-    cv.width = f.img.naturalWidth; cv.height = f.img.naturalHeight;
+    cv.width = Math.max(1,Math.round(sourceW*scale));
+    cv.height = Math.max(1,Math.round(sourceH*scale));
     var g = cv.getContext('2d');
-    g.drawImage(f.img, 0, 0);
-    var pct = +$('#size').value/100, mar = +$('#margin').value/1000, corner = $('#corner').value;
-    var bw = cv.width * pct;
-    var bh = bw * (badge.naturalHeight / badge.naturalWidth);
-    var m = cv.width * mar;
-    var bx = (corner==="tr"||corner==="br") ? cv.width-bw-m : m;
-    var by = (corner==="bl"||corner==="br") ? cv.height-bh-m : m;
-    var busy = cornerBusy(cv, bx, by, bw, bh);
-    g.drawImage(badge, bx, by, bw, bh);
-    var longest = Math.max(cv.width, cv.height);
-    return { dataUrl: cv.toDataURL('image/jpeg', 0.93), w:cv.width, h:cv.height, small:longest<1600, busy:busy };
+    g.fillStyle='#ffffff';
+    g.fillRect(0,0,cv.width,cv.height);
+    g.drawImage(f.img,0,0,cv.width,cv.height);
+    return {
+      dataUrl:cv.toDataURL('image/jpeg',0.93),
+      w:cv.width,
+      h:cv.height,
+      small:Math.max(cv.width,cv.height)<MIN_RECOMMENDED_SIDE
+    };
+  }
+
+  function dataUrlToBlob(dataUrl){
+    var parts=dataUrl.split(','), match=/data:([^;]+)/.exec(parts[0]);
+    var bytes=atob(parts[1]), out=new Uint8Array(bytes.length);
+    for(var i=0;i<bytes.length;i++) out[i]=bytes.charCodeAt(i);
+    return new Blob([out],{type:match?match[1]:'image/jpeg'});
+  }
+
+  function updatePhotoSummary(){
+    var el=$('#photoSummary');
+    if(!photos.length){ el.className='photo-summary'; el.textContent='Add at least one exact-product photo.'; return; }
+    var small=photos.reduce(function(n,f){return n+(normalizePhoto(f).small?1:0);},0);
+    if(small){
+      el.className='photo-summary warn-photo';
+      el.textContent=photos.length+' photo'+(photos.length===1?'':'s')+' ready, but '+small+' '+(small===1?'is':'are')+' smaller than the recommended 1600 pixels.';
+    }else{
+      el.className='photo-summary ready-photo';
+      el.textContent='Photos ready ✓ Clean JPEGs with no badges or added text.';
+    }
   }
 
   function drawShots(){
     var host = $('#shots');
+    updatePhotoSummary();
     if(!photos.length){ host.innerHTML = '<div class="empty">No photos yet. Use the buttons above to take or choose photos.</div>'; return; }
-    var c = cond();
-    if(!badgeReady[c]) return;
     host.innerHTML = "";
-    photos.forEach(function(f){
-      var r = stamp(f);
-      var base = f.name.replace(/\.[^.]+$/, "");
+    photos.forEach(function(f,index){
+      var r=normalizePhoto(f), name=photoName(index);
       var el = document.createElement('div');
       el.className = 'shot';
       el.innerHTML =
-        '<img alt="stamped photo" src="'+r.dataUrl+'">'+
+        '<img alt="Clean eBay-ready photo" src="'+r.dataUrl+'">'+
         '<div class="meta">'+
-          '<p class="fn">'+base.replace(/[<>&]/g,'')+'-'+c+'.jpg</p>'+
+          '<p class="fn">'+name+'</p>'+
           '<p class="flag">'+r.w+' × '+r.h+' &middot; '+
-            (r.small ? '<span class="bad">too small &mdash; retake bigger</span>'
+            (r.small ? '<span class="bad">usable, but a larger original is better</span>'
                      : '<span class="ok">good size, buyers can zoom</span>')+
-            (r.busy ? ' &middot; <span class="bad">corner looks busy</span>' : '')+
           '</p>'+
-          '<p class="savehint">Press &amp; hold the photo → <b>Save to Photos</b>. Or tap Save.</p>'+
-          '<button class="save1" type="button">↓  Save this photo</button>'+
+          '<p class="savehint">'+(index===0?'<b>Main eBay photo</b> · ':'')+'Clean `.jpeg`, ready for upload.</p>'+
+          '<div class="photo-card-actions"><button class="save1" type="button">Save eBay photo</button><button class="remove1" type="button">Remove</button></div>'+
         '</div>';
       el.querySelector('.save1').addEventListener('click', function(){
         var a = document.createElement('a');
-        a.href = r.dataUrl; a.download = base+'-'+c+'.jpg'; a.click();
-        toast('Saved '+base+'-'+c+'.jpg');
+        a.href=r.dataUrl; a.download=name; a.click();
+        toast('Saved '+name);
       });
+      el.querySelector('.remove1').addEventListener('click',function(){ photos.splice(index,1); drawShots(); });
       host.appendChild(el);
     });
   }
@@ -116,7 +125,7 @@
       var rd = new FileReader();
       rd.onload = function(){
         var im = new Image();
-        im.onload = function(){ photos.push({name:file.name||('photo-'+(photos.length+1)+'.jpg'), img:im}); drawShots(); };
+        im.onload = function(){ photos.push({name:file.name||('photo-'+(photos.length+1)+'.jpeg'), img:im}); drawShots(); };
         im.src = rd.result;
       };
       rd.readAsDataURL(file);
@@ -127,11 +136,6 @@
   $('#takePhoto').addEventListener('click', function(){ $('#camIn').click(); });
   $('#choosePhoto').addEventListener('click', function(){ $('#libIn').click(); });
   $('#clearPhotos').addEventListener('click', function(){ photos=[]; drawShots(); });
-  ['#corner','#size','#margin'].forEach(function(id){ $(id).addEventListener('input', function(){
-    if(id==='#size') $('#szv').textContent=$('#size').value+'%';
-    if(id==='#margin') $('#mgv').textContent=(+$('#margin').value/10).toFixed(1)+'%';
-    drawShots();
-  }); });
 
   /* =======================================================
      STEP 3 — DETAILS  (listing builder form)
@@ -168,6 +172,10 @@
     return {
       cond: cond(),
       sku:$('#sku').value.trim(), productId:$('#productId').value.trim(),
+      unitCost:$('#unitCost').value.trim(), availableQuantity:$('#availableQuantity').value.trim(),
+      fulfillment:$('#fulfillment').value.trim(), reviewToken:$('#reviewToken').value.trim(),
+      isPassive:$('#isPassive').value.trim(), compatibilityNote:$('#compatibilityNote').value.trim(),
+      catalogNote:$('#catalogNote').value.trim(),
       targetPrice:$('#targetPrice').value.trim(), shippingPlan:$('#shippingPlan').value.trim(),
       researchNotes:$('#researchNotes').value.trim(),
       brand:$('#brand').value.trim(), part:$('#part').value.trim(),
@@ -181,6 +189,7 @@
   var PROBLEM_WORDS = {
     "headline":"the headline", "part number":"the part number", "hook":"the short pitch (hook)",
     "sold as":"the “sold as” box", "at least one box item":"at least one “in the box” line",
+    "valid sale unit":"the sale unit as Each, Pair of 2, Set of N, or N-Pack",
     "at least one verified line":"at least one “what we verified” line"
   };
 
@@ -206,7 +215,7 @@
       banner.innerHTML = '<b>Title is too long.</b> Take out ' + (n-80) + ' letters so it fits eBay’s 80.';
     } else {
       banner.className = 'banner good';
-      banner.innerHTML = '<b>Ready!</b> Go to the last step to copy it into eBay.';
+      banner.innerHTML = '<b>Ready!</b> Go to the last step and send it to Lee.';
     }
     save();
   }
@@ -232,6 +241,70 @@
     copy(CORE.build(s), this, 'Description');
   });
 
+  function reviewIssues(){
+    var s=state(), issues=[];
+    if(!s.cond) issues.push('Choose N1, O2, or D3 from the item in front of you.');
+    CORE.problems(s).forEach(function(p){ issues.push('Finish '+(PROBLEM_WORDS[p]||p)+'.'); });
+    if(CORE.ebayTitle(s).length>80) issues.push('Shorten the title to 80 characters or fewer.');
+    if(!photos.length) issues.push('Add at least one exact-product photo.');
+    if(!/^\d+(?:\.\d{1,2})?$/.test(s.unitCost)) issues.push('Ask Lee to add the verified cost for this sale unit.');
+    if(!/^\d+$/.test(s.availableQuantity)||+s.availableQuantity<1) issues.push('Ask Lee to add the available quantity in sellable units.');
+    if(!/^(distributor|ech|pickup)$/.test(s.fulfillment)) issues.push('Ask Lee to choose distributor, ECH stock, or pickup fulfillment.');
+    if(/speaker/i.test([s.what,s.title].join(' '))&&!/^(true|false)$/.test(s.isPassive)) issues.push('Ask Lee to confirm whether this speaker is passive or powered.');
+    if(String(window.ECH_REVIEW_ENDPOINT||'').trim()&&!s.reviewToken) issues.push('Ask Lee to reconnect this product to the Business Hub.');
+    return issues;
+  }
+
+  function reviewText(s,title,manifest){
+    var lines=[
+      'ECH LISTING REVIEW',
+      'Nothing in this review has been published to eBay.',
+      '',
+      'SKU: '+(s.sku||'Not entered'),
+      'Product: '+[s.brand,s.part,s.what].filter(Boolean).join(' '),
+      'Condition: '+s.cond,
+      'Sale unit: '+s.sold,
+      'Title: '+title,
+      'Target price: '+(s.targetPrice||'Lee review required'),
+      'Shipping: '+(s.shippingPlan||'Lee review required'),
+      'Available quantity: '+(s.availableQuantity||'Lee review required'),
+      'Fulfillment: '+(s.fulfillment||'Lee review required'),
+      'Photos: '+manifest.length,
+      '',
+      'IN THE BOX',
+      s.box.join('\n'),
+      '',
+      'WHAT WAS VERIFIED',
+      s.ver.join('\n'),
+      '',
+      'RESEARCH NOTES',
+      s.researchNotes||'None'
+    ];
+    return lines.join('\n');
+  }
+
+  function prepareReview(){
+    var s=state(), issues=reviewIssues(), title=CORE.ebayTitle(s), manifest=[];
+    var files=photos.map(function(f,index){
+      var r=normalizePhoto(f), name=photoName(index);
+      manifest.push({name:name,width:r.w,height:r.h,needsLargerOriginal:r.small});
+      return new File([dataUrlToBlob(r.dataUrl)],name,{type:'image/jpeg',lastModified:Date.now()});
+    });
+    var privateItem=Object.assign({},s);
+    delete privateItem.reviewToken;
+    var pack={
+      schemaVersion:1,
+      reviewStatus:'awaiting_lee_approval',
+      preparedAt:new Date().toISOString(),
+      item:privateItem,
+      ebayTitle:title,
+      descriptionHtml:(s.cond&&!CORE.problems(s).length)?CORE.build(s):'',
+      photoManifest:manifest,
+      issues:issues
+    };
+    return {issues:issues,pack:pack,files:files,reviewText:reviewText(s,title,manifest),reviewToken:s.reviewToken};
+  }
+
   /* =======================================================
      AUTOSAVE  (survives closing the app)
   ======================================================= */
@@ -251,6 +324,10 @@
       var r = hasSavedProduct ? document.querySelector('input[name=cond][value="'+s.cond+'"]') : null; if(r) r.checked=true;
       if(!hasSavedProduct) document.querySelectorAll('input[name=cond]').forEach(function(x){ x.checked=false; });
       $('#sku').value=s.sku||''; $('#productId').value=s.productId||'';
+      $('#unitCost').value=s.unitCost||''; $('#availableQuantity').value=s.availableQuantity||'';
+      $('#fulfillment').value=s.fulfillment||''; $('#reviewToken').value=s.reviewToken||'';
+      $('#isPassive').value=s.isPassive||''; $('#compatibilityNote').value=s.compatibilityNote||'';
+      $('#catalogNote').value=s.catalogNote||'';
       $('#targetPrice').value=s.targetPrice||''; $('#shippingPlan').value=s.shippingPlan||'';
       $('#researchNotes').value=s.researchNotes||'';
       $('#brand').value=s.brand||''; $('#part').value=s.part||''; $('#what').value=s.what||'';
@@ -270,7 +347,7 @@
     if(!confirm('Start a fresh item? This clears the photos and the details.')) return;
     try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
     photos=[]; drawShots();
-    ['sku','productId','targetPrice','shippingPlan','researchNotes','brand','part','what','sold','headline','hook','productdesc','mounting'].forEach(function(k){ $('#'+k).value=''; });
+    ['sku','productId','unitCost','availableQuantity','fulfillment','reviewToken','isPassive','compatibilityNote','catalogNote','targetPrice','shippingPlan','researchNotes','brand','part','what','sold','headline','hook','productdesc','mounting'].forEach(function(k){ $('#'+k).value=''; });
     document.querySelectorAll('input[name=cond]').forEach(function(r){ r.checked=false; });
     ['box','spec','ver'].forEach(function(k){ $('#'+k+'Rows').innerHTML=''; });
     ['',''].forEach(function(t){ addRow('box',t); });
@@ -293,6 +370,13 @@
     ['sku','productId','targetPrice','shippingPlan','researchNotes','brand','part','what','sold','mounting','hook'].forEach(function(k){
       if($('#'+k)) $('#'+k).value=s[k]||'';
     });
+    $('#unitCost').value=String(s.unitCost!=null?s.unitCost:(s.cost!=null?s.cost:''));
+    $('#availableQuantity').value=String(s.availableQuantity!=null?s.availableQuantity:(s.quantity!=null?s.quantity:''));
+    $('#fulfillment').value=String(s.fulfillment||'').toLowerCase();
+    $('#reviewToken').value=String(s.reviewToken||'');
+    $('#isPassive').value=s.isPassive===true?'true':(s.isPassive===false?'false':String(s.isPassive||''));
+    $('#compatibilityNote').value=String(s.compatibilityNote||'');
+    $('#catalogNote').value=String(s.catalogNote||'');
     $('#headline').value=s.title||s.headline||'';
     $('#productdesc').value=s.pdesc||s.productdesc||'';
     document.querySelectorAll('input[name=cond]').forEach(function(r){ r.checked=false; });
@@ -308,7 +392,10 @@
     loadPrepared: loadPreparedItem,
     buildTitle: function(){ return CORE.ebayTitle(state()); },
     buildHtml: function(){ return CORE.build(state()); },
-    problems: function(){ return CORE.problems(state()); }
+    problems: function(){ return CORE.problems(state()); },
+    reviewIssues: reviewIssues,
+    prepareReview: prepareReview,
+    photoCount: function(){ return photos.length; }
   };
   go(1);
 
