@@ -172,7 +172,7 @@
     return {
       cond: cond(),
       sku:$('#sku').value.trim(), productId:$('#productId').value.trim(),
-      unitCost:$('#unitCost').value.trim(), availableQuantity:$('#availableQuantity').value.trim(),
+      availableQuantity:$('#availableQuantity').value.trim(),
       fulfillment:$('#fulfillment').value.trim(), reviewToken:$('#reviewToken').value.trim(),
       isPassive:$('#isPassive').value.trim(), compatibilityNote:$('#compatibilityNote').value.trim(),
       catalogNote:$('#catalogNote').value.trim(),
@@ -251,7 +251,6 @@
     CORE.problems(s).forEach(function(p){ issues.push('Finish '+(PROBLEM_WORDS[p]||p)+'.'); });
     if(CORE.ebayTitle(s).length>80) issues.push('Shorten the title to 80 characters or fewer.');
     if(!photos.length) issues.push('Add at least one exact-product photo.');
-    if(!/^\d+(?:\.\d{1,2})?$/.test(s.unitCost)) issues.push('Ask Lee to add the verified cost for this sale unit.');
     if(!/^\d+$/.test(s.availableQuantity)||+s.availableQuantity<1) issues.push('Ask Lee to add the available quantity in sellable units.');
     if(!/^(distributor|ech|pickup)$/.test(s.fulfillment)) issues.push('Ask Lee to choose distributor, ECH stock, or pickup fulfillment.');
     if(/speaker/i.test([s.what,s.title].join(' '))&&!/^(true|false)$/.test(s.isPassive)) issues.push('Ask Lee to confirm whether this speaker is passive or powered.');
@@ -328,7 +327,7 @@
       var r = hasSavedProduct ? document.querySelector('input[name=cond][value="'+s.cond+'"]') : null; if(r) r.checked=true;
       if(!hasSavedProduct) document.querySelectorAll('input[name=cond]').forEach(function(x){ x.checked=false; });
       $('#sku').value=s.sku||''; $('#productId').value=s.productId||'';
-      $('#unitCost').value=s.unitCost||''; $('#availableQuantity').value=s.availableQuantity||'';
+      $('#availableQuantity').value=s.availableQuantity||'';
       $('#fulfillment').value=s.fulfillment||''; $('#reviewToken').value=s.reviewToken||'';
       $('#isPassive').value=s.isPassive||''; $('#compatibilityNote').value=s.compatibilityNote||'';
       $('#catalogNote').value=s.catalogNote||'';
@@ -355,7 +354,7 @@
     if(!confirm('Start a fresh item? This clears the photos and the details.')) return;
     try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
     photos=[]; drawShots();
-    ['sku','productId','unitCost','availableQuantity','fulfillment','reviewToken','isPassive','compatibilityNote','catalogNote','ebayCategoryId','ebayCategoryName','ebayCategoryPath','ebayCategoryVerifiedAt','targetPrice','shippingPlan','researchNotes','brand','part','what','sold','headline','hook','productdesc','mounting'].forEach(function(k){ $('#'+k).value=''; });
+    ['sku','productId','availableQuantity','fulfillment','reviewToken','isPassive','compatibilityNote','catalogNote','ebayCategoryId','ebayCategoryName','ebayCategoryPath','ebayCategoryVerifiedAt','targetPrice','shippingPlan','researchNotes','brand','part','what','sold','headline','hook','productdesc','mounting'].forEach(function(k){ $('#'+k).value=''; });
     document.querySelectorAll('input[name=cond]').forEach(function(r){ r.checked=false; });
     ['box','spec','ver'].forEach(function(k){ $('#'+k+'Rows').innerHTML=''; });
     ['',''].forEach(function(t){ addRow('box',t); });
@@ -378,7 +377,6 @@
     ['sku','productId','targetPrice','shippingPlan','researchNotes','brand','part','what','sold','mounting','hook'].forEach(function(k){
       if($('#'+k)) $('#'+k).value=s[k]||'';
     });
-    $('#unitCost').value=String(s.unitCost!=null?s.unitCost:(s.cost!=null?s.cost:''));
     $('#availableQuantity').value=String(s.availableQuantity!=null?s.availableQuantity:(s.quantity!=null?s.quantity:''));
     $('#fulfillment').value=String(s.fulfillment||'').toLowerCase();
     $('#reviewToken').value=String(s.reviewToken||'');

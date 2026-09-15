@@ -2,12 +2,12 @@
 
 The queue accepts one item object, an array of item objects, or an object with an `items` array.
 
-Core fields: `sku`, `productId`, `brand`, `part`, `what`, `sold`, `title`, `mounting`, `hook`, `box`, `spec`, `ver`, `pdesc`, `targetPrice`, `shippingPlan`, `researchNotes`, `unitCost`, `availableQuantity`, `fulfillment`, `isPassive`, `compatibilityNote`, `catalogNote`, `ebayCategoryId`, `ebayCategoryName`, `ebayCategoryPath`, and `ebayCategoryVerifiedAt`.
+Core fields: `sku`, `productId`, `brand`, `part`, `what`, `sold`, `title`, `mounting`, `hook`, `box`, `spec`, `ver`, `pdesc`, `targetPrice`, `shippingPlan`, `researchNotes`, `availableQuantity`, `fulfillment`, `isPassive`, `compatibilityNote`, `catalogNote`, `ebayCategoryId`, `ebayCategoryName`, `ebayCategoryPath`, and `ebayCategoryVerifiedAt`.
 
 - `box` and `ver` are arrays of strings.
 - `spec` is an array of `[name, value]` pairs.
 - `sold` must be `Each`, `Pair of 2`, `Set of N`, or `N-Pack` and must match the price, cost, stock, photos, and box contents.
-- `unitCost` is ECH's verified cost for one sellable listing unit. It is carried privately and is not shown in Paige's screen.
+- `unitCost` is never sent to Listing Studio. The Business Hub keeps it in the server-only approval record and restores it only on Lee's review screen.
 - `availableQuantity` counts sellable listing units, not loose pieces or cartons.
 - `fulfillment` must be `distributor`, `ech`, or `pickup`.
 - `isPassive` must be `true` or `false` for speakers. Listing Studio automatically adds the passive-speaker buyer protection when it is true.
