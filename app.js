@@ -176,6 +176,10 @@
       fulfillment:$('#fulfillment').value.trim(), reviewToken:$('#reviewToken').value.trim(),
       isPassive:$('#isPassive').value.trim(), compatibilityNote:$('#compatibilityNote').value.trim(),
       catalogNote:$('#catalogNote').value.trim(),
+      ebayCategoryId:$('#ebayCategoryId').value.trim(),
+      ebayCategoryName:$('#ebayCategoryName').value.trim(),
+      ebayCategoryPath:$('#ebayCategoryPath').value.trim(),
+      ebayCategoryVerifiedAt:$('#ebayCategoryVerifiedAt').value.trim(),
       targetPrice:$('#targetPrice').value.trim(), shippingPlan:$('#shippingPlan').value.trim(),
       researchNotes:$('#researchNotes').value.trim(),
       brand:$('#brand').value.trim(), part:$('#part').value.trim(),
@@ -328,6 +332,10 @@
       $('#fulfillment').value=s.fulfillment||''; $('#reviewToken').value=s.reviewToken||'';
       $('#isPassive').value=s.isPassive||''; $('#compatibilityNote').value=s.compatibilityNote||'';
       $('#catalogNote').value=s.catalogNote||'';
+      $('#ebayCategoryId').value=s.ebayCategoryId||'';
+      $('#ebayCategoryName').value=s.ebayCategoryName||'';
+      $('#ebayCategoryPath').value=s.ebayCategoryPath||'';
+      $('#ebayCategoryVerifiedAt').value=s.ebayCategoryVerifiedAt||'';
       $('#targetPrice').value=s.targetPrice||''; $('#shippingPlan').value=s.shippingPlan||'';
       $('#researchNotes').value=s.researchNotes||'';
       $('#brand').value=s.brand||''; $('#part').value=s.part||''; $('#what').value=s.what||'';
@@ -347,7 +355,7 @@
     if(!confirm('Start a fresh item? This clears the photos and the details.')) return;
     try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
     photos=[]; drawShots();
-    ['sku','productId','unitCost','availableQuantity','fulfillment','reviewToken','isPassive','compatibilityNote','catalogNote','targetPrice','shippingPlan','researchNotes','brand','part','what','sold','headline','hook','productdesc','mounting'].forEach(function(k){ $('#'+k).value=''; });
+    ['sku','productId','unitCost','availableQuantity','fulfillment','reviewToken','isPassive','compatibilityNote','catalogNote','ebayCategoryId','ebayCategoryName','ebayCategoryPath','ebayCategoryVerifiedAt','targetPrice','shippingPlan','researchNotes','brand','part','what','sold','headline','hook','productdesc','mounting'].forEach(function(k){ $('#'+k).value=''; });
     document.querySelectorAll('input[name=cond]').forEach(function(r){ r.checked=false; });
     ['box','spec','ver'].forEach(function(k){ $('#'+k+'Rows').innerHTML=''; });
     ['',''].forEach(function(t){ addRow('box',t); });
@@ -377,6 +385,10 @@
     $('#isPassive').value=s.isPassive===true?'true':(s.isPassive===false?'false':String(s.isPassive||''));
     $('#compatibilityNote').value=String(s.compatibilityNote||'');
     $('#catalogNote').value=String(s.catalogNote||'');
+    $('#ebayCategoryId').value=String(s.ebayCategoryId||'');
+    $('#ebayCategoryName').value=String(s.ebayCategoryName||'');
+    $('#ebayCategoryPath').value=String(s.ebayCategoryPath||'');
+    $('#ebayCategoryVerifiedAt').value=String(s.ebayCategoryVerifiedAt||'');
     $('#headline').value=s.title||s.headline||'';
     $('#productdesc').value=s.pdesc||s.productdesc||'';
     document.querySelectorAll('input[name=cond]').forEach(function(r){ r.checked=false; });

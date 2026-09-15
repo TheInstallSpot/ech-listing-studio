@@ -2,7 +2,7 @@
   'use strict';
   function norm(value){ return String(value||'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
   var restrictedBrands={
-    AUDIOQUEST:{label:'AudioQuest',approvedSkus:['AUDI-PHOTON48'],note:'ECH approval is required for each exact AudioQuest SKU.'},
+    AUDIOQUEST:{label:'AudioQuest',approvedSkus:['AUDI-PHOTON48','AUDI-PQ303-BSTOCK','AUDI-PQ303-DEMO'],note:'ECH approval is required for each exact AudioQuest SKU. The PowerQuest approvals apply only to the two sealed B-stock units and one dealer-demo unit in Lee\'s approved warehouse batch.'},
     SONYES:{label:'Sony ES',approvedSkus:[],note:'ECH is not authorized to sell Sony ES on eBay.'}
   };
   function check(item){
