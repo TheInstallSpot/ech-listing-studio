@@ -1,6 +1,6 @@
 /* ECH Listing Studio service worker — offline cache.
    Bump CACHE when you change any file so devices pull the new version. */
-var CACHE = 'ech-studio-pin-v11';
+var CACHE = 'ech-studio-pin-v12';
 var ASSETS = [
   './',
   './index.html',
@@ -9,6 +9,8 @@ var ASSETS = [
   './authorization-registry.js',
   './agent-queue.js',
   './pin-access.js',
+  './pin-access.js?v=12',
+  './agent-queue.js?v=12',
   './builder-core.js',
   './manifest.webmanifest',
   './icon-192.png',
@@ -35,6 +37,13 @@ self.addEventListener('fetch', function(e){
   var url = new URL(e.request.url);
   // App shell + assets: cache-first (works fully offline).
   if(url.origin === self.location.origin){
+    if(e.request.mode==='navigate'){
+      e.respondWith(fetch(e.request).then(function(res){
+        if(res.ok){var copy=res.clone();caches.open(CACHE).then(function(c){c.put(e.request,copy);});}
+        return res;
+      }).catch(function(){return caches.match(e.request).then(function(hit){return hit||caches.match('./index.html');});}));
+      return;
+    }
     e.respondWith(
       caches.match(e.request).then(function(hit){
         return hit || fetch(e.request).then(function(res){

@@ -199,7 +199,8 @@
 <script src="app.js"></script>
 <script src="authorization-registry.js"></script>
 <script src="review-config.js"></script>
-<script src="pin-access.js"></script>
-<script src="agent-queue.js"></script>
+<script src="pin-access.js?v=12"></script>
+<script src="agent-queue.js?v=12"></script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js?v=12').then(function(r){return r.update();}).catch(function(){});}</script>
 </body>
 </html>
