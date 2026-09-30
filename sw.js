@@ -1,11 +1,12 @@
 /* ECH Listing Studio service worker — offline cache.
    Bump CACHE when you change any file so devices pull the new version. */
-var CACHE = 'ech-studio-pin-v12';
+var CACHE = 'ech-studio-clean-fields-v13';
 var ASSETS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
+  './app.js?v=13',
   './authorization-registry.js',
   './agent-queue.js',
   './pin-access.js',

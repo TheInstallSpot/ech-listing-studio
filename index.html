@@ -140,7 +140,7 @@
     <div class="f"><label>Headline</label><input type="text" id="headline" placeholder="KEF Ci4100QL-THX In-Wall Speaker — THX Certified">
       <div class="help">The item in plain, normal words.</div></div>
     <div class="f"><label>Mounting</label><input type="text" id="mounting" placeholder="In-wall / In-ceiling / Free-standing / Not applicable"></div>
-    <div class="f"><label>Hook — 1 or 2 short sentences</label><textarea id="hook" placeholder="Factory-sealed THX in-wall, sold each so you can build an exact set. Full dealer warranty."></textarea>
+    <div class="f"><label>Short description for the buyer</label><textarea id="hook" placeholder="Write 1 or 2 short sentences about the one item being sold."></textarea>
       <div class="count" id="hookCount">0 letters</div></div>
 
     <div class="sec">In the box</div>
@@ -196,11 +196,12 @@
 </div></nav>
 
 <script src="builder-core.js"></script>
-<script src="app.js"></script>
+<script src="app.js?v=13"></script>
 <script src="authorization-registry.js"></script>
 <script src="review-config.js"></script>
 <script src="pin-access.js?v=12"></script>
 <script src="agent-queue.js?v=12"></script>
-<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js?v=12').then(function(r){return r.update();}).catch(function(){});}</script>
+<style>input::placeholder,textarea::placeholder{color:#737373;opacity:1;}</style>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js?v=13').then(function(r){return r.update();}).catch(function(){});}</script>
 </body>
 </html>

@@ -374,6 +374,12 @@
 
   function loadPreparedItem(s){
     s=s||{};
+    // Only clean incoming preparation, never overwrite an in-progress draft.
+    s=Object.assign({},s);
+    if(/being (documented|prepared|photographed)|photos must|complete boxes are available/i.test(s.hook||''))s.hook='';
+    s.box=(s.box||[]).filter(function(v){return !/^(Paige must|Exact package contents must)/i.test(v);});
+    s.ver=(s.ver||[]).filter(function(v){return !/^(Photograph|Make a separate photo|Lay out|Keep the new box|Put (all|both)|Do not open|Use (both|the speaker)|Record any)/i.test(v);});
+    if(s.pdesc)s.pdesc=s.pdesc.replace(/ The listing must describe.*$/,'');
     ['sku','productId','targetPrice','shippingPlan','researchNotes','brand','part','what','sold','mounting','hook'].forEach(function(k){
       if($('#'+k)) $('#'+k).value=s[k]||'';
     });
