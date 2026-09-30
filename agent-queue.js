@@ -39,7 +39,7 @@
     items.forEach(function(it,i){
       var auth=authorization(it); if(!auth.allowed)blocked++;
       var o=document.createElement('option'); o.value=String(i);
-      o.textContent=(auth.allowed?'':'BLOCKED — ')+(it.sku?it.sku+' — ':'')+[it.brand,it.part,it.what].filter(Boolean).join(' ');
+      o.textContent=(auth.allowed?'':'BLOCKED — ')+(it.queueLabel || ((it.sku?it.sku+' — ':'')+[it.brand,it.part,it.what].filter(Boolean).join(' ')));
       o.className=auth.allowed?'':'queue-blocked'; sel.appendChild(o);
     });
     if(old&&items[+old]) sel.value=old;
@@ -49,6 +49,10 @@
   function selected(){ var n=+$('preparedSelect').value; return items[n]||null; }
   function updateSelection(){ var it=selected(), allowed=it&&authorization(it).allowed; $('loadPrepared').disabled=!allowed; $('completePrepared').disabled=!it; }
   function mergeRemote(rows){
+    if(!Array.isArray(rows)) throw new Error('Invalid queue response');
+    var remoteIds=rows.map(function(row){return row.queueId;});
+    // Remove retired cloud jobs from the selector, not the in-progress form/photos.
+    items=items.filter(function(it){return !it._queueId || remoteIds.indexOf(it._queueId)>=0;});
     var added=0;
     (Array.isArray(rows)?rows:[]).forEach(function(row){
       var prepared=row&&row.payload&&Array.isArray(row.payload.items)?row.payload.items:[];

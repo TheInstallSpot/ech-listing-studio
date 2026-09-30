@@ -28,7 +28,8 @@
     var back = $('#navBack'), next = $('#navNext');
     back.disabled = step === 1;
     next.textContent = step === 4 ? "Start next item  ↻" : "Next  →";
-    window.scrollTo({top:0, behavior:'smooth'});
+    var activePanel = $('.panel.active');
+    if(activePanel) activePanel.scrollIntoView({block:'start', behavior:'smooth'});
   }
   $('#navBack').addEventListener('click', function(){ go(step-1); });
   $('#navNext').addEventListener('click', function(){
