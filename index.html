@@ -23,6 +23,17 @@
   <div class="masthead"><img src="masthead.png" alt="ECH — The Electronics Clearing House"></div>
   <p class="tagline">Listing Studio — photos &amp; eBay listings</p>
 
+  <section id="pinConnect" class="agent-queue" aria-labelledby="pinTitle" hidden>
+    <h2 id="pinTitle">Connect your device</h2>
+    <p>Enter the 6-digit PIN Lee gave you. You only need to do this once on this device.</p>
+    <form id="pinForm">
+      <label for="paigePin">Your PIN</label>
+      <input id="paigePin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" minlength="6" autocomplete="off" required style="font-size:24px;letter-spacing:6px;max-width:220px;display:block;margin:12px 0;padding:12px">
+      <button id="pinSubmit" type="submit">Connect</button>
+    </form>
+    <p id="pinStatus" role="status" aria-live="polite"></p>
+  </section>
+
   <section class="agent-queue" aria-labelledby="queueTitle">
     <div class="agent-queue-head">
       <div><span class="agent-kicker">Approved by Lee</span><h2 id="queueTitle">Paige's next product</h2></div>
@@ -36,6 +47,7 @@
     </div>
     <div class="queue-actions">
       <button class="queue-sync" id="syncApprovals" type="button">Sync approved work</button>
+      <button id="pinSignOut" type="button" hidden>Disconnect this device</button>
       <button id="importPrepared" type="button">Add products from Lee</button>
       <button id="completePrepared" type="button" disabled>Remove from my list</button>
     </div>
@@ -186,6 +198,7 @@
 <script src="app.js"></script>
 <script src="authorization-registry.js"></script>
 <script src="review-config.js"></script>
+<script src="pin-access.js"></script>
 <script src="agent-queue.js"></script>
 </body>
 </html>

@@ -65,12 +65,13 @@
   }
   function syncApprovals(quiet){
     var token=queueToken();
-    if(!token){ if(!quiet)status('This iPad needs Lee’s one-time secure setup link.',true); return Promise.resolve(); }
+    var pinConnected=window.ECHPin&&window.ECHPin.connected();
+    if(!token&&!pinConnected){ window.ECHPin.prompt(); if(!quiet)status('Enter your PIN above to connect this device.',true); return Promise.resolve(); }
     if(!navigator.onLine){ if(!quiet)status('Offline — saved work is available. Sync will retry when internet returns.'); return Promise.resolve(); }
     if(syncing)return Promise.resolve();
     syncing=true; $('syncApprovals').disabled=true;
     if(!quiet)status('Checking for approved work…');
-    return rpc('list_ech_ready_products',{p_token:token}).then(function(rows){
+    return (pinConnected?window.ECHPin.list():rpc('list_ech_ready_products',{p_token:token})).then(function(rows){
       var added=mergeRemote(rows);
       status(added?added+' newly approved product'+(added===1?' is':'s are')+' ready.':'Queue is current. '+items.length+' product'+(items.length===1?'':'s')+' ready.');
     }).catch(function(err){
@@ -162,6 +163,7 @@
   });
 
   var connectedNow=acceptSetupLink();
+  document.addEventListener('ech:pinConnected',function(){syncApprovals(false);});
   read(); render();
   if(connectedNow)status('Secure queue connected. Checking for approved work…');
   syncApprovals(!connectedNow);
