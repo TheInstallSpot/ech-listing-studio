@@ -91,6 +91,7 @@
   }
 
   function drawShots(){
+    document.dispatchEvent(new Event('ech:draftChanged'));
     var host = $('#shots');
     updatePhotoSummary();
     if(!photos.length){ host.innerHTML = '<div class="empty">No photos yet. Use the buttons above to take or choose photos.</div>'; return; }
@@ -316,6 +317,7 @@
     try{
       var s = state();
       localStorage.setItem(SAVE_KEY, JSON.stringify(s));
+      document.dispatchEvent(new Event('ech:draftChanged'));
     }catch(e){}
   }
   function restore(){
@@ -351,7 +353,8 @@
     }
     onChange();
   }
-  function startOver(){
+  async function startOver(){
+    if(window.ECHCloud&&photos.length){try{await window.ECHCloud.flush();}catch(e){toast('Photos are not confirmed saved. Stay here and retry saving.');return;}}
     if(!confirm('Start a fresh item? This clears the photos and the details.')) return;
     try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
     photos=[]; drawShots();
@@ -375,6 +378,7 @@
 
   function loadPreparedItem(s){
     s=s||{};
+    if(s.sku && s.sku!==$('#sku').value) photos=[];
     // Only clean incoming preparation, never overwrite an in-progress draft.
     s=Object.assign({},s);
     if(/being (documented|prepared|photographed)|photos must|complete boxes are available/i.test(s.hook||''))s.hook='';
@@ -412,7 +416,18 @@
     problems: function(){ return CORE.problems(state()); },
     reviewIssues: reviewIssues,
     prepareReview: prepareReview,
-    photoCount: function(){ return photos.length; }
+    photoCount: function(){ return photos.length; },
+    exportPhotos: function(){return photos.map(function(f,index){var r=normalizePhoto(f);return new File([dataUrlToBlob(r.dataUrl)],photoName(index),{type:'image/jpeg'});});},
+    restoreCloud: async function(s,files){
+      var restored=await Promise.all(files.map(function(file){return new Promise(function(resolve,reject){
+        var url=URL.createObjectURL(file),im=new Image();
+        im.onload=function(){URL.revokeObjectURL(url);resolve({name:file.name,img:im});};
+        im.onerror=function(){URL.revokeObjectURL(url);reject(new Error('Cannot recover photo'));};im.src=url;
+      });}));
+      loadPreparedItem(s);
+      document.querySelectorAll('input[name=cond]').forEach(function(r){r.checked=r.value===s.cond;});
+      photos=restored;onChange();drawShots();go(2);
+    }
   };
   go(1);
 

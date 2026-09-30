@@ -84,7 +84,14 @@
   }
 
   $('preparedSelect').addEventListener('change',function(){ var it=selected(), auth=it?authorization(it):null; updateSelection(); status(auth&&!auth.allowed?auth.reason:'',auth&&!auth.allowed); });
-  function loadSelected(){ var it=selected(); if(!it)return; var auth=authorization(it); if(!auth.allowed){status(auth.reason,true);return;} activeQueueId=it._queueId||''; document.dispatchEvent(new CustomEvent('ech:loadPrepared',{detail:it})); status('Your product is ready. Start by choosing the condition.'); }
+  async function loadSelected(){
+    var it=selected();if(!it)return;var auth=authorization(it);if(!auth.allowed){status(auth.reason,true);return;}
+    if(window.ECHCloud&&window.ECHStudio.photoCount()){
+      try{await window.ECHCloud.flush();}catch(e){status('Save the current photos before switching products.',true);return;}
+    }
+    activeQueueId=it._queueId||'';document.dispatchEvent(new CustomEvent('ech:loadPrepared',{detail:it}));
+    status('Your product is ready. Start by choosing the condition.');
+  }
   $('loadPrepared').addEventListener('click',loadSelected);
   $('syncApprovals').addEventListener('click',function(){syncApprovals(false);});
   $('importPrepared').addEventListener('click',function(){ $('preparedFile').click(); });
@@ -119,11 +126,29 @@
   async function postToHub(endpoint,result){
     var form=new FormData();
     form.append('listing',new Blob([JSON.stringify(result.pack)],{type:'application/json'}),'listing-review.json');
-    result.files.forEach(function(file){form.append('photos',file,file.name);});
-    var response=await fetch(endpoint,{method:'POST',body:form,credentials:'omit',headers:{Authorization:'Bearer '+result.reviewToken}});
-    var body=await response.json().catch(function(){return {};});
-    if(!response.ok)throw new Error(body.error||'The Business Hub did not accept the review.');
-    return body;
+    if(result.photoReferences)form.append('photoReferences',JSON.stringify(result.photoReferences));
+    else result.files.forEach(function(file){form.append('photos',file,file.name);});
+    return new Promise(function(resolve,reject){
+      var xhr=new XMLHttpRequest();
+      xhr.open('POST',endpoint,true);
+      xhr.timeout=120000;
+      xhr.setRequestHeader('Authorization','Bearer '+result.reviewToken);
+      xhr.upload.onprogress=function(event){
+        handoffMessage(event.lengthComputable
+          ? 'Uploading photos: '+Math.round(event.loaded/event.total*100)+'%. Keep this page open.'
+          : 'Uploading photos. Keep this page open.');
+      };
+      xhr.upload.onload=function(){handoffMessage('Photos transferred. Waiting for secure storage confirmation…');};
+      xhr.onload=function(){
+        var body; try{body=JSON.parse(xhr.responseText);}catch(e){body={};}
+        if(xhr.status>=200&&xhr.status<300&&body.reviewId)resolve(body);
+        else reject(new Error(body.error||'No storage confirmation received. Keep this page open and ask Lee to check receipt before retrying.'));
+      };
+      xhr.onerror=function(){reject(new Error('Connection interrupted. Keep this page open. Ask Lee to check receipt before retrying.'));};
+      xhr.ontimeout=function(){reject(new Error('Upload timed out after 2 minutes. Keep this page open—your photos have not been cleared. Ask Lee to check receipt before retrying.'));};
+      xhr.onabort=function(){reject(new Error('Upload stopped. Keep this page open; your photos have not been cleared.'));};
+      xhr.send(form);
+    });
   }
   async function shareReview(result){
     if(!navigator.share)return false;
@@ -143,14 +168,21 @@
     if(!window.ECHStudio)return;
     var issues=window.ECHStudio.reviewIssues();
     if(issues.length){handoffMessage(issues[0],true);status(issues[0],true);return;}
-    var button=this, old=button.textContent; button.disabled=true; button.textContent='Checking…';
+    var button=this, old=button.textContent, confirmed=false; button.disabled=true; button.textContent='Checking…';
     try{
       var result=window.ECHStudio.prepareReview(); saveLocal(result.pack);
       var endpoint=String(window.ECH_REVIEW_ENDPOINT||'').trim();
       if(endpoint){
         if(!navigator.onLine)throw new Error('You are offline. The review is saved here; send it when the connection returns.');
         button.textContent='Sending…';
+        if(window.ECHCloud){
+          button.textContent='Saving photos…';
+          result.photoReferences=await window.ECHCloud.flush();
+          button.textContent='Sending for review…';
+        }
         var accepted=await postToHub(endpoint,result);
+        confirmed=true;
+        if(window.ECHCloud)window.ECHCloud.submitted();
         removeSubmitted(activeQueueId,result.pack.item.sku);
         handoffMessage('Sent to Lee ✓ Review '+String(accepted.reviewId||'').slice(0,8)+' is waiting. Nothing was published to eBay.');
         status('Sent to Lee for approval.');
@@ -163,7 +195,7 @@
     }catch(err){
       if(err&&err.name==='AbortError')handoffMessage('Sending was canceled. Nothing was published.',true);
       else handoffMessage((err&&err.message)||'Could not send this review. Nothing was published.',true);
-    }finally{button.disabled=false;button.textContent=old;}
+    }finally{button.disabled=confirmed;button.textContent=confirmed?'Sent to Lee ✓':old;}
   });
 
   var connectedNow=acceptSetupLink();

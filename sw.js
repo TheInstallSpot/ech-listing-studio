@@ -1,17 +1,19 @@
 /* ECH Listing Studio service worker — offline cache.
    Bump CACHE when you change any file so devices pull the new version. */
-var CACHE = 'ech-studio-queue-scroll-v14';
+var CACHE = 'ech-studio-cloud-photos-v15';
 var ASSETS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
-  './app.js?v=14',
+  './app.js?v=15',
   './authorization-registry.js',
   './agent-queue.js',
   './pin-access.js',
   './pin-access.js?v=12',
-  './agent-queue.js?v=14',
+  './agent-queue.js?v=15',
+  './cloud-draft.js?v=15',
+  './builder-core.js?v=15',
   './builder-core.js',
   './manifest.webmanifest',
   './icon-192.png',

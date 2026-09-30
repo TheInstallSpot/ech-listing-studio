@@ -164,7 +164,7 @@ function esc(s){
     var p = [];
     if(!s.title) p.push("headline");
     if(!s.part)  p.push("part number");
-    if(!s.hook)  p.push("hook");
+    // Marketing copy is prepared by Lee's workflow, not required from Paige.
     if(!s.sold)  p.push("sold as");
     else if(!/^(Each|Pair of 2|Set of \d+|\d+-Pack)$/i.test(String(s.sold).trim())) p.push("valid sale unit");
     if(!s.box.length) p.push("at least one box item");
