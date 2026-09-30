@@ -109,13 +109,8 @@
                      : '<span class="ok">good size, buyers can zoom</span>')+
           '</p>'+
           '<p class="savehint">'+(index===0?'<b>Main eBay photo</b> · ':'')+'Clean `.jpeg`, ready for upload.</p>'+
-          '<div class="photo-card-actions"><button class="save1" type="button">Save eBay photo</button><button class="remove1" type="button">Remove</button></div>'+
+          '<div class="photo-card-actions"><button class="remove1" type="button">Remove</button></div>'+
         '</div>';
-      el.querySelector('.save1').addEventListener('click', function(){
-        var a = document.createElement('a');
-        a.href=r.dataUrl; a.download=name; a.click();
-        toast('Saved '+name);
-      });
       el.querySelector('.remove1').addEventListener('click',function(){ photos.splice(index,1); drawShots(); });
       host.appendChild(el);
     });
@@ -378,6 +373,8 @@
 
   function loadPreparedItem(s){
     s=s||{};
+    $('#sendToLee').disabled=false;$('#sendToLee').textContent='Send to Lee for approval';
+    $('#handoffStatus').textContent='Lee will review this item before publication.';
     if(s.sku && s.sku!==$('#sku').value) photos=[];
     // Only clean incoming preparation, never overwrite an in-progress draft.
     s=Object.assign({},s);
