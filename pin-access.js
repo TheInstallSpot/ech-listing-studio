@@ -42,6 +42,8 @@
     }finally{$('pinSubmit').disabled=false;}
   });
   $('pinSignOut').hidden=!token();
+  $('pinConnectButton').hidden=!!token();
+  $('pinConnectButton').addEventListener('click',function(){show();$('paigePin').focus();});
   $('pinSignOut').addEventListener('click',async function(){
     if(!confirm('Disconnect this device? Finish sending any photos to Lee first.'))return;
     this.disabled=true;
