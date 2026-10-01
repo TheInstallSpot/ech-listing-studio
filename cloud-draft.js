@@ -17,7 +17,10 @@
     try{
       var response=await fetch(window.ECH_REVIEW_ENDPOINT,{method:'POST',body:form,headers:{Authorization:'Bearer '+token},signal:controller.signal});
       var body=await response.json();
-      if(!response.ok||body.reviewId)throw new Error(body.error||'This item has already been sent to Lee.');
+      if(!response.ok)throw new Error(body.error||'Could not confirm cloud storage.');
+      // A signed, server-confirmed receipt is a terminal success, not a failed
+      // recovery. Only reads may consume it; uploads must never treat it as a photo.
+      if(body.reviewId&&mode!=='draft-read')throw new Error('This item has already been sent to Lee.');
       return body;
     }finally{clearTimeout(timeout);}
   }
@@ -58,13 +61,24 @@
     try{
       var result=await request('draft-read',token,{}), draft=result.snapshot;
       if(generation!==recoveryGeneration)return;
+      if(result.reviewId){
+        stopped=true;
+        var send=document.getElementById('sendToLee');
+        if(send){send.disabled=true;send.textContent='Sent to Lee ✓';}
+        say('This item was already sent to Lee. Choose the next product above.');
+        return;
+      }
       if(draft&&draft.item&&draft.item.sku!==item.sku)throw new Error('Saved product mismatch');
       if(draft&&draft.item&&Array.isArray(draft.photos)&&draft.photos.length){
         var files=[];
         for(var i=0;i<draft.photos.length;i++){
-          var ref=draft.photos[i], response=await fetch(ref.signedUrl);
+          var ref=draft.photos[i], controller=new AbortController();
+          var photoTimeout=setTimeout(function(){controller.abort();},45000);
+          var response;
+          try{response=await fetch(ref.signedUrl,{signal:controller.signal});
           if(!response.ok)throw new Error('Photo recovery failed');
           files.push(new File([await response.blob()],ref.originalName||'photo.jpeg',{type:'image/jpeg'}));
+          }finally{clearTimeout(photoTimeout);}
           delete ref.signedUrl;cache[item.sku+':'+ref.sha256]=ref;
         }
         if(generation!==recoveryGeneration||studio.getState().sku!==item.sku||studio.getState().reviewToken!==token)return;
@@ -72,7 +86,7 @@
         say(files.length+' photos recovered from the cloud ✓');
       }else say('Photos will save to the cloud as you take them.');
     }catch(error){if(generation===recoveryGeneration){recoveryFailed=true;say('Could not check cloud recovery. Keep this page open and tap Retry saving photos.',true);}}
-    finally{if(generation===recoveryGeneration){recovering=false;photoGate(recoveryFailed);}}
+    finally{if(generation===recoveryGeneration){recovering=false;photoGate(recoveryFailed||stopped);}}
   }
   function beginRecovery(){recoveryTask=recover();return recoveryTask;}
   retry.onclick=function(){if(recoveryFailed)beginRecovery();else saveNow().catch(function(){});};
