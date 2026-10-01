@@ -1,18 +1,18 @@
 /* ECH Listing Studio service worker — offline cache.
    Bump CACHE when you change any file so devices pull the new version. */
-var CACHE = 'ech-studio-cloud-photos-v16';
+var CACHE = 'ech-studio-product-isolation-v17';
 var ASSETS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
-  './app.js?v=16',
+  './app.js?v=17',
   './authorization-registry.js',
   './agent-queue.js',
   './pin-access.js',
   './pin-access.js?v=12',
-  './agent-queue.js?v=15',
-  './cloud-draft.js?v=15',
+  './agent-queue.js?v=17',
+  './cloud-draft.js?v=17',
   './builder-core.js?v=15',
   './builder-core.js',
   './manifest.webmanifest',

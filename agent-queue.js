@@ -9,6 +9,13 @@
   var items=[];
   var syncing=false;
   var activeQueueId='';
+  var switching=false;
+  var activeLabel=document.createElement('p');activeLabel.id='activeProduct';activeLabel.setAttribute('role','status');
+  activeLabel.style.cssText='position:sticky;top:0;z-index:20;background:#eef4f8;padding:14px;font-weight:700;border:2px solid #2f7a4f';
+  $('preparedSelect').closest('section').after(activeLabel);
+  function showActive(){var s=window.ECHStudio.getState();activeLabel.textContent=s.sku?'Working on: '+[s.brand,s.part].filter(Boolean).join(' ')+' — '+s.sku:'Choose a product above to begin.';}
+  function lockWork(locked){document.querySelectorAll('.panel,.rail,#navNext,#navBack').forEach(function(el){el.inert=locked;});}
+  document.addEventListener('ech:draftChanged',showActive);
 
   function authorization(it){ return window.ECHAuthorization?window.ECHAuthorization.check(it):{allowed:true,restricted:false,reason:''}; }
   function read(){ try{ items=JSON.parse(localStorage.getItem(KEY)||'[]'); }catch(e){ items=[]; } if(!Array.isArray(items)) items=[]; }
@@ -33,8 +40,8 @@
     return true;
   }
   function render(){
-    var sel=$('preparedSelect'), old=sel.value; sel.innerHTML='';
-    if(!items.length){ var z=document.createElement('option'); z.value=''; z.textContent='No approved products waiting'; sel.appendChild(z); }
+    var sel=$('preparedSelect'), oldSku=selected()&&selected().sku, currentSku=window.ECHStudio.getState().sku; sel.innerHTML='';
+    var z=document.createElement('option'); z.value=''; z.textContent=items.length?'Choose your product…':'No approved products waiting'; sel.appendChild(z);
     var blocked=0;
     items.forEach(function(it,i){
       var auth=authorization(it); if(!auth.allowed)blocked++;
@@ -42,11 +49,12 @@
       o.textContent=(auth.allowed?'':'BLOCKED — ')+(it.queueLabel || ((it.sku?it.sku+' — ':'')+[it.brand,it.part,it.what].filter(Boolean).join(' ')));
       o.className=auth.allowed?'':'queue-blocked'; sel.appendChild(o);
     });
-    if(old&&items[+old]) sel.value=old;
+    var keep=items.findIndex(function(it){return it.sku===(currentSku||oldSku);});
+    if(keep>=0)sel.value=String(keep);
     $('queueCount').textContent=(items.length-blocked)+' ready'+(blocked?' • '+blocked+' blocked':'');
     updateSelection();
   }
-  function selected(){ var n=+$('preparedSelect').value; return items[n]||null; }
+  function selected(){var value=$('preparedSelect').value;if(value==='')return null;return items[+value]||null;}
   function updateSelection(){ var it=selected(), allowed=it&&authorization(it).allowed; $('loadPrepared').disabled=!allowed; $('completePrepared').disabled=!it; }
   function mergeRemote(rows){
     if(!Array.isArray(rows)) throw new Error('Invalid queue response');
@@ -83,14 +91,22 @@
     }).finally(function(){ syncing=false; $('syncApprovals').disabled=false; });
   }
 
-  $('preparedSelect').addEventListener('change',function(){ var it=selected(), auth=it?authorization(it):null; updateSelection(); status(auth&&!auth.allowed?auth.reason:'',auth&&!auth.allowed); });
+  $('preparedSelect').addEventListener('change',function(){loadSelected();});
   async function loadSelected(){
+    if(switching)return;
     var it=selected();if(!it)return;var auth=authorization(it);if(!auth.allowed){status(auth.reason,true);return;}
-    if(window.ECHCloud&&window.ECHStudio.photoCount()){
-      try{await window.ECHCloud.flush();}catch(e){status('Save the current photos before switching products.',true);return;}
-    }
-    activeQueueId=it._queueId||'';document.dispatchEvent(new CustomEvent('ech:loadPrepared',{detail:it}));
-    status('Your product is ready. Start by choosing the condition.');
+    switching=true;lockWork(true);$('preparedSelect').disabled=true;$('loadPrepared').disabled=true;
+    try{
+      if(window.ECHCloud)await window.ECHCloud.ready();
+      if(window.ECHCloud&&window.ECHStudio.photoCount())await window.ECHCloud.flush();
+      activeQueueId=it._queueId||'';document.dispatchEvent(new CustomEvent('ech:loadPrepared',{detail:it}));
+      if(window.ECHCloud)await window.ECHCloud.ready();
+      showActive();status('Product loaded. Check the name above, then choose its condition.');
+    }catch(e){
+      var current=window.ECHStudio.getState().sku, index=items.findIndex(function(x){return x.sku===current;});
+      if(index>=0)$('preparedSelect').value=String(index);
+      status('Could not switch safely. Your current photos are still here. '+e.message,true);
+    }finally{switching=false;lockWork(false);$('preparedSelect').disabled=false;updateSelection();}
   }
   $('loadPrepared').addEventListener('click',loadSelected);
   $('syncApprovals').addEventListener('click',function(){syncApprovals(false);});
@@ -183,7 +199,7 @@
         var accepted=await postToHub(endpoint,result);
         confirmed=true;
         if(window.ECHCloud)window.ECHCloud.submitted();
-        removeSubmitted(activeQueueId,result.pack.item.sku);
+        removeSubmitted('',result.pack.item.sku);
         handoffMessage('Sent to Lee ✓ Review '+String(accepted.reviewId||'').slice(0,8)+' is waiting. Nothing was published to eBay.');
         status('Sent to Lee for approval.');
       }else{
@@ -200,7 +216,7 @@
 
   var connectedNow=acceptSetupLink();
   document.addEventListener('ech:pinConnected',function(){syncApprovals(false);});
-  read(); render();
+  read(); render();showActive();
   if(connectedNow)status('Secure queue connected. Checking for approved work…');
   syncApprovals(!connectedNow);
   window.addEventListener('online',function(){syncApprovals(true);});

@@ -1,6 +1,7 @@
 (function(){
   'use strict';
   var timer, busy=null, recovering=false, recoveryFailed=false, stopped=false, cache={}, revision=0;
+  var recoveryTask=null,recoveryGeneration=0;
   var status=document.createElement('div');
   status.id='cloudSaveStatus';status.setAttribute('role','status');
   status.style.cssText='padding:12px;margin:10px 0;background:#eef4f8;border-radius:8px';
@@ -49,12 +50,15 @@
   }
   function schedule(){revision++;clearTimeout(timer);if(!recovering&&!stopped)timer=setTimeout(function(){saveNow().catch(function(){});},1200);}
   async function recover(){
+    var generation=++recoveryGeneration;
     clearTimeout(timer);recovering=true;recoveryFailed=false;stopped=false;photoGate(true);
     var studio=window.ECHStudio,item=studio.getState(),token=item.reviewToken;
-    if(!token){recovering=false;say('Choose a product to save its photos securely.');return;}
+    if(!token){recovering=false;photoGate(false);say('Choose a product to save its photos securely.');return;}
     say('Checking for saved cloud photos…');
     try{
       var result=await request('draft-read',token,{}), draft=result.snapshot;
+      if(generation!==recoveryGeneration)return;
+      if(draft&&draft.item&&draft.item.sku!==item.sku)throw new Error('Saved product mismatch');
       if(draft&&draft.item&&Array.isArray(draft.photos)&&draft.photos.length){
         var files=[];
         for(var i=0;i<draft.photos.length;i++){
@@ -63,17 +67,18 @@
           files.push(new File([await response.blob()],ref.originalName||'photo.jpeg',{type:'image/jpeg'}));
           delete ref.signedUrl;cache[item.sku+':'+ref.sha256]=ref;
         }
-        if(studio.getState().sku!==item.sku)return;
+        if(generation!==recoveryGeneration||studio.getState().sku!==item.sku||studio.getState().reviewToken!==token)return;
         await studio.restoreCloud(Object.assign({},draft.item,{reviewToken:token}),files);
         say(files.length+' photos recovered from the cloud ✓');
       }else say('Photos will save to the cloud as you take them.');
-    }catch(error){recoveryFailed=true;say('Could not check cloud recovery. Keep this page open and tap Retry saving photos.',true);}
-    finally{recovering=false;photoGate(recoveryFailed);}
+    }catch(error){if(generation===recoveryGeneration){recoveryFailed=true;say('Could not check cloud recovery. Keep this page open and tap Retry saving photos.',true);}}
+    finally{if(generation===recoveryGeneration){recovering=false;photoGate(recoveryFailed);}}
   }
-  retry.onclick=function(){if(recoveryFailed)recover();else saveNow().catch(function(){});};
+  function beginRecovery(){recoveryTask=recover();return recoveryTask;}
+  retry.onclick=function(){if(recoveryFailed)beginRecovery();else saveNow().catch(function(){});};
   document.addEventListener('ech:draftChanged',schedule);
-  document.addEventListener('ech:loadPrepared',function(){recover();});
+  document.addEventListener('ech:loadPrepared',beginRecovery);
   window.addEventListener('online',function(){if(!recovering)saveNow().catch(function(){});});
-  window.ECHCloud={flush:saveNow,submitted:function(){stopped=true;clearTimeout(timer);say('Sent to Lee. Photos are safely stored ✓');}};
-  recover();
+  window.ECHCloud={flush:saveNow,ready:async function(){await recoveryTask;if(recoveryFailed)throw new Error('Cloud recovery needs a retry.');},submitted:function(){stopped=true;clearTimeout(timer);say('Sent to Lee. Photos are safely stored ✓');}};
+  beginRecovery();
 })();

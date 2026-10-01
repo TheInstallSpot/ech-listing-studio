@@ -11,6 +11,7 @@
   /* ---------- shared state ---------- */
   var step = 1;
   var photos = []; // {name, img}
+  var productGeneration=0;
 
   function cond(){ var r = $('input[name=cond]:checked'); return r ? r.value : ""; }
 
@@ -117,12 +118,13 @@
   }
 
   function addFiles(list){
+    var generation=productGeneration;
     Array.prototype.forEach.call(list, function(file){
       if(!/^image\//.test(file.type)) return;
       var rd = new FileReader();
       rd.onload = function(){
         var im = new Image();
-        im.onload = function(){ photos.push({name:file.name||('photo-'+(photos.length+1)+'.jpeg'), img:im}); drawShots(); };
+        im.onload = function(){ if(generation!==productGeneration)return;photos.push({name:file.name||('photo-'+(photos.length+1)+'.jpeg'), img:im}); drawShots(); };
         im.src = rd.result;
       };
       rd.readAsDataURL(file);
@@ -351,6 +353,7 @@
   async function startOver(){
     if(window.ECHCloud&&photos.length){try{await window.ECHCloud.flush();}catch(e){toast('Photos are not confirmed saved. Stay here and retry saving.');return;}}
     if(!confirm('Start a fresh item? This clears the photos and the details.')) return;
+    productGeneration++;
     try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
     photos=[]; drawShots();
     ['sku','productId','availableQuantity','fulfillment','reviewToken','isPassive','compatibilityNote','catalogNote','ebayCategoryId','ebayCategoryName','ebayCategoryPath','ebayCategoryVerifiedAt','targetPrice','shippingPlan','researchNotes','brand','part','what','sold','headline','hook','productdesc','mounting'].forEach(function(k){ $('#'+k).value=''; });
@@ -372,6 +375,7 @@
   drawShots();
 
   function loadPreparedItem(s){
+    productGeneration++;
     s=s||{};
     $('#sendToLee').disabled=false;$('#sendToLee').textContent='Send to Lee for approval';
     $('#handoffStatus').textContent='Lee will review this item before publication.';
@@ -416,11 +420,14 @@
     photoCount: function(){ return photos.length; },
     exportPhotos: function(){return photos.map(function(f,index){var r=normalizePhoto(f);return new File([dataUrlToBlob(r.dataUrl)],photoName(index),{type:'image/jpeg'});});},
     restoreCloud: async function(s,files){
+      var generation=productGeneration, current=state();
+      if(s.sku!==current.sku||s.reviewToken!==current.reviewToken)throw new Error('Saved product does not match this item.');
       var restored=await Promise.all(files.map(function(file){return new Promise(function(resolve,reject){
         var url=URL.createObjectURL(file),im=new Image();
         im.onload=function(){URL.revokeObjectURL(url);resolve({name:file.name,img:im});};
         im.onerror=function(){URL.revokeObjectURL(url);reject(new Error('Cannot recover photo'));};im.src=url;
       });}));
+      if(generation!==productGeneration)return;
       loadPreparedItem(s);
       document.querySelectorAll('input[name=cond]').forEach(function(r){r.checked=r.value===s.cond;});
       photos=restored;onChange();drawShots();go(2);
