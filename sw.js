@@ -1,10 +1,12 @@
 /* ECH Listing Studio service worker — offline cache.
    Bump CACHE when you change any file so devices pull the new version. */
-var CACHE = 'ech-studio-readiness-v21';
+var CACHE = 'ech-studio-header-v22';
 var ASSETS = [
   './',
   './index.html',
   './styles.css',
+  './masthead.png',
+  './masthead.png?v=22',
   './app.js',
   './app.js?v=21',
   './authorization-registry.js',
@@ -48,12 +50,13 @@ self.addEventListener('fetch', function(e){
       return;
     }
     e.respondWith(
-      caches.match(e.request).then(function(hit){
+      caches.match(e.request,{cacheName:CACHE}).then(function(hit){
         return hit || fetch(e.request).then(function(res){
-          var copy = res.clone();
-          caches.open(CACHE).then(function(c){ c.put(e.request, copy); });
+          // Never persist a failed response or HTML error page as an image.
+          var usable=res.ok&&(e.request.destination!=='image'||(res.headers.get('Content-Type')||'').indexOf('image/')===0);
+          if(usable){var copy = res.clone();caches.open(CACHE).then(function(c){ c.put(e.request, copy); });}
           return res;
-        }).catch(function(){ return caches.match('./index.html'); });
+        }).catch(function(){ return Response.error(); });
       })
     );
     return;
