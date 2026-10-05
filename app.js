@@ -362,9 +362,11 @@
     ['',''].forEach(function(t){ addRow('box',t); });
     SEED_SPEC.forEach(function(p){ addRow('spec',p[0],p[1]); });
     ['',''].forEach(function(t){ addRow('ver',t); });
+    if(window.ECHCloud)window.ECHCloud.resetEmpty();
     onChange(); go(1);
   }
   $('#startOver').addEventListener('click', startOver);
+  $('#resetWork').addEventListener('click', startOver);
 
   /* ---------- toast ---------- */
   var toEl;

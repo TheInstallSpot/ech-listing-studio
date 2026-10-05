@@ -93,6 +93,13 @@
   document.addEventListener('ech:draftChanged',schedule);
   document.addEventListener('ech:loadPrepared',beginRecovery);
   window.addEventListener('online',function(){if(!recovering)saveNow().catch(function(){});});
-  window.ECHCloud={flush:saveNow,ready:async function(){await recoveryTask;if(recoveryFailed)throw new Error('Cloud recovery needs a retry.');},submitted:function(){stopped=true;clearTimeout(timer);say('Sent to Lee. Photos are safely stored ✓');}};
+  window.ECHCloud={flush:saveNow,ready:async function(){await recoveryTask;if(recoveryFailed)throw new Error('Cloud recovery needs a retry.');},
+    resetEmpty:function(){
+      // Called only after the explicit fresh-item confirmation and cleared form.
+      // Never deletes a cloud draft, and never bypasses saving in-memory photos.
+      if(window.ECHStudio.photoCount()||window.ECHStudio.getState().reviewToken)throw new Error('Finish saving this item first.');
+      clearTimeout(timer);recoveryGeneration++;recovering=false;recoveryFailed=false;stopped=false;
+      recoveryTask=Promise.resolve();photoGate(false);say('Choose the next approved product above.');
+    },submitted:function(){stopped=true;clearTimeout(timer);say('Sent to Lee. Photos are safely stored ✓');}};
   beginRecovery();
 })();
