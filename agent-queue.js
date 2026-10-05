@@ -87,7 +87,8 @@
       var added=mergeRemote(rows);
       status(added?added+' newly approved product'+(added===1?' is':'s are')+' ready.':'Queue is current. '+items.length+' product'+(items.length===1?'':'s')+' ready.');
     }).catch(function(err){
-      status(/credential rejected/i.test(err.message)?'Secure queue connection needs Lee to reconnect it.':'Could not sync right now. Saved work still works offline.',true);
+      $('queueCount').textContent='Saved list — not verified';
+      status(/credential rejected/i.test(err.message)?'Secure queue connection needs Lee to reconnect it.':'Could not refresh the list. Your current photos are still here. Tap Sync approved work before starting another item.',true);
     }).finally(function(){ syncing=false; $('syncApprovals').disabled=false; });
   }
 

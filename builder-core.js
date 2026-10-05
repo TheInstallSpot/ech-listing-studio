@@ -6,7 +6,7 @@ function esc(s){
 
   // ---------------- repeatable rows
   var CONDS = {
-    N1:{label:"New \u00b7 Factory sealed", tagBg:"#1839B4", border:"#1839B4", text:"#1839B4"},
+    N1:{label:"New \u00b7 Unused", tagBg:"#1839B4", border:"#1839B4", text:"#1839B4"},
     O2:{label:"Used \u00b7 Opened gear",  tagBg:"#0F1318", border:"#22282F", text:"#22282F"},
     D3:{label:"Dealer demo \u00b7 Tested", tagBg:"#7C5F22", border:"#7C5F22", text:"#7C5F22"}
   };
@@ -76,7 +76,7 @@ function esc(s){
            ';font-weight:bold;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#14181D;">'+esc(t)+'</h2>';
   }
 
-  function build(s){
+  function legacyBuild(s){
     var c = CONDS[s.cond], o = [];
 
     o.push('<div style="width:96%;max-width:1080px;margin:0 auto;padding:22px 18px 24px;background-color:#ffffff;font-family:'+F_BODY+
@@ -152,6 +152,22 @@ function esc(s){
 
     o.push('\n</div>');
     return o.join("");
+  }
+
+  // October 4 approved master, ported from description() in build_store_master_previews.py.
+  // Only this item's supplied facts are rendered; no blanket seal, warranty or return claims.
+  function build(s){
+    var section=function(t,b){return '<section style="padding:22px 5%;"><h2 style="margin:0 0 14px;padding-bottom:9px;border-bottom:3px solid #d7a72d;color:#071b33;font-size:22px;">'+esc(t)+'</h2>'+b+'</section>';};
+    var condition={N1:'New and unused. Packaging may have been opened only for photography; this does not mean the item has been used.',O2:'Used equipment.',D3:'Dealer-demo equipment.'}[s.cond]||'Condition requires Lee’s review.';
+    var verified=(s.ver||[]).filter(Boolean);
+    var contents='<ul style="padding-left:22px;">'+(s.box||[]).filter(Boolean).map(function(v){return '<li style="margin:7px 0;">'+esc(v)+'</li>';}).join('')+'</ul>';
+    var warning=s.isPassive===true?'Passive speaker: an external amplifier or receiver is required. Confirm the sale unit and included items before purchase.':'Confirm the exact model, sale unit and listed contents before purchase. Only the items listed as included are supplied.';
+    var compatibility=s.compatibilityNote||'Check compatibility with your equipment and installation before purchase. Ask us if anything is unclear.';
+    var fulfillment={ech:'Ships from Electronics Clearing House owned inventory.',distributor:'Ships through authorized distribution.',pickup:'Local pickup only.'}[s.fulfillment]||'See this eBay listing for fulfillment details.';
+    var rows=(s.spec||[]).slice();if(s.mounting)rows.push(['Mounting',s.mounting]);rows.push(['Sale unit',s.sold||'Requires review']);
+    var cards=[[s.brand,'BRAND'],[s.part,'EXACT MODEL'],[s.sold,'WHAT YOU RECEIVE']].map(function(r){return '<div style="flex:1 1 180px;background:#071b33;border-bottom:5px solid #d7a72d;padding:18px 12px;text-align:center;box-sizing:border-box;"><strong style="display:block;color:#f1cd70;font-size:20px;overflow-wrap:anywhere;">'+esc(r[0])+'</strong><span style="color:white;font-size:12px;">'+r[1]+'</span></div>';}).join('');
+    var specifications='<table style="width:100%;border-collapse:collapse;table-layout:fixed;font-size:14px;">'+rows.filter(function(r){return r[0]&&r[1];}).map(function(r){return '<tr><th scope="row" style="width:34%;text-align:left;vertical-align:top;background:#edf2f6;padding:12px;border:1px solid #d6dee7;overflow-wrap:anywhere;">'+esc(r[0])+'</th><td style="padding:12px;border:1px solid #d6dee7;overflow-wrap:anywhere;">'+esc(r[1])+'</td></tr>';}).join('')+'</table>';
+    return '<div style="margin:0;padding:16px 0;background:#edf1f5;color:#17263a;font-family:Arial,Helvetica,sans-serif;line-height:1.55;"><div style="width:96%;max-width:1080px;margin:auto;background:white;border:1px solid #ccd5df;box-shadow:0 5px 18px #071b3324;"><div style="height:7px;background:#d7a72d;"></div><header style="background:#071b33;padding:24px 5%;text-align:center;"><img src="https://theinstallspot.github.io/ech-listing-studio/masthead.png" alt="Electronics Clearing House" style="display:block;width:760px;max-width:100%;height:auto;margin:auto;"><p style="color:#f1cd70;font-size:12px;letter-spacing:1.3px;margin-bottom:0;">CLEAR DETAILS • HONEST CONDITION • REAL ECH SUPPORT</p></header><div style="background:#f8fafc;padding:28px 5%;border-bottom:1px solid #dbe2ea;"><span style="display:inline-block;background:#d7a72d;color:#071b33;padding:7px 12px;font-size:13px;font-weight:bold;">'+esc(s.cond)+' · '+esc(CONDS[s.cond]?CONDS[s.cond].label:'Review needed')+'</span><h1 style="font-size:28px;line-height:1.22;color:#071b33;overflow-wrap:anywhere;">'+esc(s.title)+'</h1>'+(s.hook?'<p style="margin-bottom:0;">'+esc(s.hook)+'</p>':'')+'</div><div style="display:flex;flex-wrap:wrap;gap:10px;padding:26px 5% 4px;">'+cards+'</div>'+section('Condition','<p>'+esc(condition)+'</p>'+verified.map(function(v){return '<p>'+esc(v)+'</p>';}).join(''))+section('What is included',contents)+'<aside style="margin:6px 5% 14px;padding:20px;background:#fff7df;border-left:6px solid #d7a72d;"><strong style="color:#071b33;">'+esc(warning)+'</strong></aside>'+section('Technical specifications',specifications)+section('Before you buy','<p>'+esc(compatibility)+'</p>'+(s.pdesc?'<p>'+esc(s.pdesc)+'</p>':''))+section('Shipping and returns','<p>'+esc(fulfillment)+'</p><p>'+esc(s.shippingPlan||'Shipping cost, handling time, service and delivery estimates are shown in this eBay listing.')+'</p><p>Please review the return terms displayed in this eBay listing before purchase.</p>')+'<div style="margin:24px 5%;padding:24px;background:#0e3159;color:white;border-left:7px solid #d7a72d;"><span style="color:#f1cd70;font-size:12px;letter-spacing:1px;">THE ECH DIFFERENCE</span><h2 style="margin:7px 0;font-size:23px;">Equipment for real installation projects</h2><p>Electronics Clearing House offers home audio, video, networking and smart-home equipment. Clear model identification, honest condition and explicit package contents help you choose the right gear.</p><a style="color:#f1cd70;font-weight:bold;" href="https://www.ebay.com/str/theelectronicsclearinghouse">Shop the ECH store</a> • <a style="color:#f1cd70;" href="https://www.ebay.com/fdbk/feedback_profile/theelectronicsclearinghouse">View our feedback</a></div><footer style="background:#071b33;color:white;text-align:center;padding:22px 5%;border-top:5px solid #d7a72d;"><strong style="color:#f1cd70;">Questions about fit or compatibility?</strong><br>Send us an eBay message before purchase.</footer></div></div>';
   }
 
   function ebayTitle(s){

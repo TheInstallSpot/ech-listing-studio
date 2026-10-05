@@ -19,7 +19,12 @@
     connected:function(){return !!token();},
     prompt:show,
     list:async function(){
-      try{var data=await request('queue');return data.items;}
+      try{
+        var data;
+        try{data=await request('queue');}
+        catch(first){if(first.code==='unauthorized')throw first;data=await request('queue');}
+        return data.items;
+      }
       catch(e){if(e.code==='unauthorized'){localStorage.removeItem(KEY);show('Please enter your PIN to reconnect.');$('pinSignOut').hidden=true;}throw e;}
     }
   };
