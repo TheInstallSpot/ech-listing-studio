@@ -8,6 +8,7 @@
   var $=function(id){return document.getElementById(id);};
   var items=[];
   var syncing=false;
+  var queueVerified=false;
   var activeQueueId='';
   var switching=false;
   var activeLabel=document.createElement('p');activeLabel.id='activeProduct';activeLabel.setAttribute('role','status');
@@ -79,14 +80,16 @@
     var token=queueToken();
     var pinConnected=window.ECHPin&&window.ECHPin.connected();
     if(!token&&!pinConnected){ window.ECHPin.prompt(); if(!quiet)status('Enter your PIN above to connect this device.',true); return Promise.resolve(); }
-    if(!navigator.onLine){ if(!quiet)status('Offline — saved work is available. Sync will retry when internet returns.'); return Promise.resolve(); }
+    if(!navigator.onLine){ queueVerified=false; if(!quiet)status('Offline — saved work is available. Sync will retry when internet returns.'); return Promise.resolve(); }
     if(syncing)return Promise.resolve();
     syncing=true; $('syncApprovals').disabled=true;
     if(!quiet)status('Checking for approved work…');
     return (pinConnected?window.ECHPin.list():rpc('list_ech_ready_products',{p_token:token})).then(function(rows){
       var added=mergeRemote(rows);
+      queueVerified=true;
       status(added?added+' newly approved product'+(added===1?' is':'s are')+' ready.':'Queue is current. '+items.length+' product'+(items.length===1?'':'s')+' ready.');
     }).catch(function(err){
+      queueVerified=false;
       $('queueCount').textContent='Saved list — not verified';
       status(/credential rejected/i.test(err.message)?'Secure queue connection needs Lee to reconnect it.':'Could not refresh the list. Your current photos are still here. Tap Sync approved work before starting another item.',true);
     }).finally(function(){ syncing=false; $('syncApprovals').disabled=false; });
@@ -98,7 +101,12 @@
     var it=selected();if(!it)return;var auth=authorization(it);if(!auth.allowed){status(auth.reason,true);return;}
     switching=true;lockWork(true);$('preparedSelect').disabled=true;$('loadPrepared').disabled=true;
     try{
-      if(window.ECHCloud)await window.ECHCloud.ready();
+      // A freshly reconciled queue is authoritative for retired jobs. Do not
+      // require an obsolete job's upload permission just to open the next job.
+      // Keep the old cloud draft intact, and never skip saving visible photos.
+      var current=window.ECHStudio.getState();
+      var retiredEmpty=queueVerified&&current.sku&&!items.some(function(x){return x.sku===current.sku;})&&!window.ECHStudio.photoCount();
+      if(window.ECHCloud&&!retiredEmpty)await window.ECHCloud.ready();
       if(window.ECHCloud&&window.ECHStudio.photoCount())await window.ECHCloud.flush();
       activeQueueId=it._queueId||'';document.dispatchEvent(new CustomEvent('ech:loadPrepared',{detail:it}));
       if(window.ECHCloud)await window.ECHCloud.ready();
