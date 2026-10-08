@@ -7,6 +7,11 @@
   };
   function check(item){
     var brand=norm(item&&item.brand), sku=norm(item&&item.sku), part=norm(item&&item.part);
+    // Current owner holds apply to all conditions and fulfillment paths.
+    // These are not lifted by supplier availability or a generic approval flag.
+    var heldBrand=brand==='KEF'||brand==='FOCAL'||brand==='DEFINITIVETECHNOLOGY';
+    var heldSku=/^(KEF|FOCAL|DEFINITIVE[ _-]*TECHNOLOGY)[-_]/i.test(String(item&&item.sku||''));
+    if(heldBrand||heldSku)return {allowed:false,restricted:true,reason:'This product is on Lee\'s current ECH listing hold.',note:'Lee must explicitly lift the exact hold before this product can enter the listing workflow.'};
     if(brand==='SONANCE' && (sku.indexOf('MAG')!==-1 || part.indexOf('MAG')!==-1)) return {allowed:false,restricted:true,reason:'This Sonance MAG product is not approved for the normal wholesale queue.',note:'MAG kits are Best Buy exclusives.'};
     var rule=restrictedBrands[brand];
     if(!rule) return {allowed:true,restricted:false,reason:''};
