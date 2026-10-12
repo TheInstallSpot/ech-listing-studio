@@ -1,6 +1,6 @@
 {
   "name": "ech-listing-studio",
-  "version": "0.24.0-rc.2",
+  "version": "0.24.0-rc.3",
   "private": true,
   "description": "Buildless ECH listing preparation PWA; no publication worker",
   "engines": {"node": ">=22"},

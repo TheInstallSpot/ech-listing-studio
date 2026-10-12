@@ -1,0 +1,642 @@
+[
+  {
+    "table_schema": "private",
+    "table_name": "ech_photo_drafts",
+    "column_name": "queue_id",
+    "udt_name": "uuid",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "private",
+    "table_name": "ech_photo_drafts",
+    "column_name": "snapshot",
+    "udt_name": "jsonb",
+    "column_default": "'{}'::jsonb",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "private",
+    "table_name": "ech_photo_drafts",
+    "column_name": "updated_at",
+    "udt_name": "timestamptz",
+    "column_default": "now()",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "private",
+    "table_name": "ech_pin_account",
+    "column_name": "id",
+    "udt_name": "bool",
+    "column_default": "true",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "private",
+    "table_name": "ech_pin_account",
+    "column_name": "pin_hash",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "private",
+    "table_name": "ech_pin_account",
+    "column_name": "enabled",
+    "udt_name": "bool",
+    "column_default": "false",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "private",
+    "table_name": "ech_pin_account",
+    "column_name": "failures",
+    "udt_name": "int4",
+    "column_default": "0",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "private",
+    "table_name": "ech_pin_account",
+    "column_name": "day_failures",
+    "udt_name": "int4",
+    "column_default": "0",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "private",
+    "table_name": "ech_pin_account",
+    "column_name": "failure_day",
+    "udt_name": "date",
+    "column_default": "CURRENT_DATE",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "private",
+    "table_name": "ech_pin_account",
+    "column_name": "locked_until",
+    "udt_name": "timestamptz",
+    "column_default": null,
+    "is_nullable": "YES"
+  },
+  {
+    "table_schema": "private",
+    "table_name": "ech_pin_account",
+    "column_name": "generation",
+    "udt_name": "int4",
+    "column_default": "1",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "private",
+    "table_name": "ech_pin_sessions",
+    "column_name": "token_hash",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "private",
+    "table_name": "ech_pin_sessions",
+    "column_name": "generation",
+    "udt_name": "int4",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "private",
+    "table_name": "ech_pin_sessions",
+    "column_name": "created_at",
+    "udt_name": "timestamptz",
+    "column_default": "now()",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "private",
+    "table_name": "ech_pin_sessions",
+    "column_name": "expires_at",
+    "udt_name": "timestamptz",
+    "column_default": "(now() + '30 days'::interval)",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "private",
+    "table_name": "ech_pin_sessions",
+    "column_name": "revoked_at",
+    "udt_name": "timestamptz",
+    "column_default": null,
+    "is_nullable": "YES"
+  },
+  {
+    "table_schema": "private",
+    "table_name": "ech_review_tokens",
+    "column_name": "queue_id",
+    "udt_name": "uuid",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "private",
+    "table_name": "ech_review_tokens",
+    "column_name": "recommendation_id",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "private",
+    "table_name": "ech_review_tokens",
+    "column_name": "sku",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "private",
+    "table_name": "ech_review_tokens",
+    "column_name": "token_hash",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "private",
+    "table_name": "ech_review_tokens",
+    "column_name": "authorization_data",
+    "udt_name": "jsonb",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "private",
+    "table_name": "ech_review_tokens",
+    "column_name": "expires_at",
+    "udt_name": "timestamptz",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "private",
+    "table_name": "ech_review_tokens",
+    "column_name": "used_at",
+    "udt_name": "timestamptz",
+    "column_default": null,
+    "is_nullable": "YES"
+  },
+  {
+    "table_schema": "private",
+    "table_name": "ech_review_tokens",
+    "column_name": "created_at",
+    "udt_name": "timestamptz",
+    "column_default": "now()",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_audit_log",
+    "column_name": "id",
+    "udt_name": "uuid",
+    "column_default": "gen_random_uuid()",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_audit_log",
+    "column_name": "review_id",
+    "udt_name": "uuid",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_audit_log",
+    "column_name": "action",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_audit_log",
+    "column_name": "actor_id",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_audit_log",
+    "column_name": "offer_id",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "YES"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_audit_log",
+    "column_name": "listing_id",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "YES"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_audit_log",
+    "column_name": "submitted_values",
+    "udt_name": "jsonb",
+    "column_default": "'{}'::jsonb",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_audit_log",
+    "column_name": "result_status",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_audit_log",
+    "column_name": "detail",
+    "udt_name": "jsonb",
+    "column_default": "'{}'::jsonb",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_audit_log",
+    "column_name": "occurred_at",
+    "udt_name": "timestamptz",
+    "column_default": "now()",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_review_photos",
+    "column_name": "id",
+    "udt_name": "uuid",
+    "column_default": "gen_random_uuid()",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_review_photos",
+    "column_name": "review_id",
+    "udt_name": "uuid",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_review_photos",
+    "column_name": "display_order",
+    "udt_name": "int4",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_review_photos",
+    "column_name": "storage_path",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_review_photos",
+    "column_name": "original_name",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_review_photos",
+    "column_name": "mime_type",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_review_photos",
+    "column_name": "size_bytes",
+    "udt_name": "int4",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_review_photos",
+    "column_name": "sha256",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_review_photos",
+    "column_name": "width",
+    "udt_name": "int4",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_review_photos",
+    "column_name": "height",
+    "udt_name": "int4",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_review_photos",
+    "column_name": "ebay_image_id",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "YES"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_review_photos",
+    "column_name": "ebay_picture_url",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "YES"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_review_photos",
+    "column_name": "created_at",
+    "udt_name": "timestamptz",
+    "column_default": "now()",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "id",
+    "udt_name": "uuid",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "queue_id",
+    "udt_name": "uuid",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "recommendation_id",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "sku",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "schema_version",
+    "udt_name": "int4",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "review_status",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "listing",
+    "udt_name": "jsonb",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "condition_code",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "ebay_title",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "sale_unit",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "unit_cost",
+    "udt_name": "numeric",
+    "column_default": null,
+    "is_nullable": "YES"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "available_quantity",
+    "udt_name": "int4",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "target_price",
+    "udt_name": "numeric",
+    "column_default": null,
+    "is_nullable": "YES"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "fulfillment_type",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "photo_count",
+    "udt_name": "int4",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "warnings",
+    "udt_name": "jsonb",
+    "column_default": "'[]'::jsonb",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "ebay_picture_urls",
+    "udt_name": "jsonb",
+    "column_default": "'[]'::jsonb",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "offer_id",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "YES"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "listing_id",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "YES"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "approved_by",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "YES"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "approved_at",
+    "udt_name": "timestamptz",
+    "column_default": null,
+    "is_nullable": "YES"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "published_at",
+    "udt_name": "timestamptz",
+    "column_default": null,
+    "is_nullable": "YES"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "last_error",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "YES"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "received_at",
+    "udt_name": "timestamptz",
+    "column_default": "now()",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_listing_reviews",
+    "column_name": "updated_at",
+    "udt_name": "timestamptz",
+    "column_default": "now()",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_ready_products",
+    "column_name": "id",
+    "udt_name": "uuid",
+    "column_default": "gen_random_uuid()",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_ready_products",
+    "column_name": "recommendation_id",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_ready_products",
+    "column_name": "sku",
+    "udt_name": "text",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_ready_products",
+    "column_name": "payload",
+    "udt_name": "jsonb",
+    "column_default": null,
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_ready_products",
+    "column_name": "status",
+    "udt_name": "text",
+    "column_default": "'ready'::text",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_ready_products",
+    "column_name": "approved_at",
+    "udt_name": "timestamptz",
+    "column_default": "now()",
+    "is_nullable": "NO"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_ready_products",
+    "column_name": "completed_at",
+    "udt_name": "timestamptz",
+    "column_default": null,
+    "is_nullable": "YES"
+  },
+  {
+    "table_schema": "public",
+    "table_name": "ech_ready_products",
+    "column_name": "output",
+    "udt_name": "jsonb",
+    "column_default": null,
+    "is_nullable": "YES"
+  }
+]

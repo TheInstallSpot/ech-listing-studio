@@ -1,0 +1,45 @@
+{
+  "observedDate": "2026-10-12",
+  "project": "qrhajotxduywvqmztvjq",
+  "reviewVersion": 9,
+  "pinVersion": 1,
+  "scope": "read-only source/schema snapshots; no production records or credential values",
+  "files": [
+    {
+      "path": "baseline/columns.json",
+      "sha256": "5c9944757a7b150cb35dbc2d1339d2ef83a7c8ac172d65b21a55492c9599a4ef"
+    },
+    {
+      "path": "baseline/ech-listing-review/index.ts",
+      "sha256": "79561149da132993a76524d26639fc0cda45c6cb2c3c8ccff402209a5509fd27"
+    },
+    {
+      "path": "baseline/ech-paige-pin/index.ts",
+      "sha256": "585c13cbaf4afd8a9ede59cd5ed5cbff7a18dad107ccded6720b06d338d20ef5"
+    },
+    {
+      "path": "baseline/sql/accept_ech_listing_review.sql",
+      "sha256": "9a0f301a4950579878ee23b2454fda759a05e3013db138f0612f6e7c1269246f"
+    },
+    {
+      "path": "baseline/sql/ech_draft_state.sql",
+      "sha256": "b21351e9c2b6f10ceeaef425b6046d44fef631b0b8b4d58f8b294a3bc325ea16"
+    },
+    {
+      "path": "baseline/sql/ech_pin_login.sql",
+      "sha256": "4cc1335552e8c592e4426205514d6bbe1f7588dcc7fccf2e1680222d2d8e1c22"
+    },
+    {
+      "path": "baseline/sql/ech_pin_queue.sql",
+      "sha256": "7948b138913fcea02ab3dfd623bdbb9199f908c0a5ad3a0534e617f9aa6aa950"
+    },
+    {
+      "path": "baseline/sql/ech_review_receipt.sql",
+      "sha256": "933d4f41ff830b980970942a7eaea1029e5bb2ffb75c634682087025206489a8"
+    },
+    {
+      "path": "baseline/sql/inspect_ech_review_token.sql",
+      "sha256": "8896403866cf5e92e561168b106c866d8c27a0846d031dea6a66b6de1a2b45aa"
+    }
+  ]
+}

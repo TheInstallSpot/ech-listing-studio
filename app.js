@@ -313,6 +313,7 @@
     delete privateItem.reviewToken;delete privateItem._draftId;
     var pack={
       schemaVersion:1,
+      queueId:draftId,
       reviewStatus:'awaiting_lee_approval',
       preparedAt:new Date().toISOString(),
       item:privateItem,
@@ -404,11 +405,12 @@
   function loadPreparedItem(s){
     productGeneration++;
     s=s||{};
+    var previousDraftId=draftId;
     draftId=s._draftId||s._queueId||s.queueId||s.productId||crypto.randomUUID();hasCorrections=false;
     $('#quantityConfirmed').checked=s.quantityConfirmed===true;$('#physicalQuantity').textContent='Available quantity: '+(s.availableQuantity||'not entered')+' buyer unit(s).';
     $('#sendToLee').disabled=false;$('#sendToLee').textContent='Send to Lee for approval';
     $('#handoffStatus').textContent='Lee will review this item before publication.';
-    if(s.sku && s.sku!==$('#sku').value) photos=[];
+    if(draftId!==previousDraftId||(s.sku&&s.sku!==$('#sku').value))photos=[];
     // Only clean incoming preparation, never overwrite an in-progress draft.
     s=Object.assign({},s);
     if(/being (documented|prepared|photographed)|photos must|complete boxes are available/i.test(s.hook||''))s.hook='';

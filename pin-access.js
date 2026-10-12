@@ -1,7 +1,7 @@
 (function(){
   'use strict';
   var KEY='ech-paige-session-v1';
-  var ENDPOINT='https://qrhajotxduywvqmztvjq.supabase.co/functions/v1/ech-paige-pin';
+  var ENDPOINT=window.ECH_PIN_ENDPOINT||'https://qrhajotxduywvqmztvjq.supabase.co/functions/v1/ech-paige-pin';
   var $=function(id){return document.getElementById(id);};
   function token(){try{return localStorage.getItem(KEY)||'';}catch(e){return '';}}
   function show(message){$('pinConnect').hidden=false;$('pinStatus').textContent=message||'';}

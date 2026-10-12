@@ -50,7 +50,9 @@
       o.textContent=(auth.allowed?'':'BLOCKED — ')+(it.queueLabel || ((it.sku?it.sku+' — ':'')+[it.brand,it.part,it.what].filter(Boolean).join(' ')));
       o.className=auth.allowed?'':'queue-blocked'; sel.appendChild(o);
     });
-    var keep=items.findIndex(function(it){return it.sku===(currentSku||oldSku);});
+    var currentId=window.ECHStudio.getState()._draftId;
+    var keep=items.findIndex(function(it){return currentId&&(it._queueId||it.queueId||it.productId)===currentId;});
+    if(keep<0){var matching=items.map(function(it,i){return it.sku===(currentSku||oldSku)?i:-1;}).filter(function(i){return i>=0;});if(matching.length===1)keep=matching[0];}
     if(keep>=0)sel.value=String(keep);
     $('queueCount').textContent=(items.length-blocked)+' ready'+(blocked?' • '+blocked+' blocked':'');
     updateSelection();

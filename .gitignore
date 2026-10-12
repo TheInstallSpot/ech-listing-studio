@@ -2,3 +2,5 @@
 .env.*
 node_modules/
 tests/runtime-evidence/
+tests/server-runtime/.runtime/
+server/memory-preservation/
