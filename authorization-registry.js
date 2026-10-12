@@ -13,6 +13,9 @@
     var heldSku=/^(KEF|FOCAL|DEFINITIVE[ _-]*TECHNOLOGY)[-_]/i.test(String(item&&item.sku||''));
     if(heldBrand||heldSku)return {allowed:false,restricted:true,reason:'This product is on Lee\'s current ECH listing hold.',note:'Lee must explicitly lift the exact hold before this product can enter the listing workflow.'};
     if(brand==='SONANCE' && (sku.indexOf('MAG')!==-1 || part.indexOf('MAG')!==-1)) return {allowed:false,restricted:true,reason:'This Sonance MAG product is not approved for the normal wholesale queue.',note:'MAG kits are Best Buy exclusives.'};
+    if(brand==='SONY'&&(/ES$/.test(part)||/(^|[-_])ES($|[-_])/i.test(String(item&&item.sku||''))))return {allowed:false,restricted:true,reason:'Sony ES products are not approved for eBay.'};
+    if((brand==='EPISODE'||brand==='TRIAD')&&String(item&&item.fulfillment||'').toLowerCase()==='distributor')return {allowed:false,restricted:true,reason:'This wholesale channel requires an exact reviewed exception.'};
+    if(brand==='AUDIOQUEST'&&/^AUDIPQ303/.test(sku)&&String(item&&item.fulfillment||'').toLowerCase()!=='ech')return {allowed:false,restricted:true,reason:'PowerQuest 303 approval is for the specified owned stock only.'};
     var rule=restrictedBrands[brand];
     if(!rule) return {allowed:true,restricted:false,reason:''};
     var allowed=rule.approvedSkus.some(function(approved){return norm(approved)===sku;});

@@ -93,7 +93,7 @@
   document.addEventListener('ech:draftChanged',schedule);
   document.addEventListener('ech:loadPrepared',beginRecovery);
   window.addEventListener('online',function(){if(!recovering)saveNow().catch(function(){});});
-  window.ECHCloud={flush:saveNow,ready:async function(){await recoveryTask;if(recoveryFailed)throw new Error('Cloud recovery needs a retry.');},
+  window.ECHCloud={isSubmitted:function(){return stopped;},flush:saveNow,ready:async function(){await recoveryTask;if(recoveryFailed)throw new Error('Cloud recovery needs a retry.');},
     resetEmpty:function(){
       // Called only after the explicit fresh-item confirmation and cleared form.
       // Never deletes a cloud draft, and never bypasses saving in-memory photos.

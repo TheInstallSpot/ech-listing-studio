@@ -1,0 +1,19 @@
+PASS Canonical title maps all physical classifications
+PASS Buyer HTML escapes defects and discloses missing parts
+PASS Passive flag string and boolean have matching protection
+PASS Private serial cannot leak into public HTML
+PASS SKU unit ambiguity blocks core approval
+PASS N1 does not invent factory seal and returns
+PASS Current brand holds and exact AQ scope fail closed
+PASS Sony ES and Sonance MAG remain blocked
+PASS app.js parses
+PASS cloud-draft.js parses
+PASS draft-local.js parses
+PASS draft-store.js parses
+PASS agent-queue.js parses
+PASS pin-access.js parses
+PASS sw.js parses
+PASS Every versioned script is in the service-worker asset inventory
+PASS service worker refuses HTML-as-image cache pollution
+PASS service worker caches a successful image
+18 source and safety checks passed.

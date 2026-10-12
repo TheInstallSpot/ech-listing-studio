@@ -1,0 +1,44 @@
+[
+  {
+    "file": "agent-queue.js",
+    "sameAsV23": false,
+    "localLines": 223,
+    "v23Lines": 232
+  },
+  {
+    "file": "app.js",
+    "sameAsV23": false,
+    "localLines": 441,
+    "v23Lines": 443
+  },
+  {
+    "file": "builder-core.js",
+    "sameAsV23": false,
+    "localLines": 178,
+    "v23Lines": 194
+  },
+  {
+    "file": "index.html",
+    "sameAsV23": false,
+    "localLines": 208,
+    "v23Lines": 209
+  },
+  {
+    "file": "pin-access.js",
+    "sameAsV23": false,
+    "localLines": 59,
+    "v23Lines": 64
+  },
+  {
+    "file": "sw.js",
+    "sameAsV23": false,
+    "localLines": 69,
+    "v23Lines": 73
+  },
+  {
+    "file": "cloud-draft.js",
+    "sameAsV23": false,
+    "localLines": 84,
+    "v23Lines": 105
+  }
+]

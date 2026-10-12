@@ -1,0 +1,10 @@
+{
+  "name": "ech-listing-studio",
+  "version": "0.24.0-rc.1",
+  "private": true,
+  "description": "Buildless ECH listing preparation PWA; no publication worker",
+  "engines": {"node": ">=22"},
+  "scripts": {"test": "node tests/unit.mjs", "test:browser": "node tests/dev-server.mjs"},
+  "dependencies": {},
+  "devDependencies": {}
+}

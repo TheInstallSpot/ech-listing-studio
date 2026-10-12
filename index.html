@@ -78,6 +78,7 @@
   <section class="panel" data-step="1">
     <h2>Pick the condition</h2>
     <p class="lead">Choose one from the item in front of you. The app uses it in the title and listing, but never puts it on the photos.</p>
+    <p id="physicalQuantity">Available quantity needs confirmation.</p><label><input type="checkbox" id="quantityConfirmed"> I checked the available quantity and included contents.</label>
     <div class="conds">
       <label class="cond n1"><input type="radio" name="cond" value="N1">
         <span class="code">N1</span><span class="cd"><b>New and unused</b><span>Opening the box only for photos is okay.</span></span><span class="tick"></span></label>
@@ -112,6 +113,11 @@
 
   <!-- STEP 3 : DETAILS -->
   <section class="panel" data-step="3" id="panel-details">
+    <details><summary>Item checks and missing parts</summary>
+      <label for="serialNumber">Serial number (private review only)</label><input id="serialNumber" type="text" autocomplete="off">
+      <label for="packaging">Packaging</label><select id="packaging"><option value="">Not confirmed</option><option value="new_in_box">New in box</option><option value="open_box">Open box, unused</option><option value="other">Other / no original box</option></select>
+      <label for="defects">Known defects or missing parts</label><textarea id="defects" placeholder="Describe exactly what you found. Leave blank only when no defects or missing parts are known."></textarea>
+    </details>
     <h2>Check the item details</h2>
     <p class="lead">Lee prepared these details. Check what is included with the item. You do not need to write sales copy or set a price.</p>
 
@@ -196,13 +202,15 @@
   <button class="next" id="navNext" type="button">Next  →</button>
 </div></nav>
 
-<script src="builder-core.js?v=21"></script>
-<script src="app.js?v=21"></script>
-<script src="authorization-registry.js?v=23"></script>
+<script src="builder-core.js?v=24rc1"></script>
+<script src="draft-store.js?v=24rc1"></script>
+<script src="app.js?v=24rc1"></script>
+<script src="authorization-registry.js?v=24rc1"></script>
 <script src="review-config.js"></script>
 <script src="pin-access.js?v=21"></script>
-<script src="agent-queue.js?v=21"></script>
-<script src="cloud-draft.js?v=21"></script>
+<script src="agent-queue.js?v=24rc1"></script>
+<script src="cloud-draft.js?v=24rc1"></script>
+<script src="draft-local.js?v=24rc1"></script>
 <style>input::placeholder,textarea::placeholder{color:#737373;opacity:1;}</style>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js?v=22').then(function(r){return r.update();}).catch(function(){});}</script>
 </body>

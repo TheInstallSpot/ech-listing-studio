@@ -106,6 +106,7 @@
       // Keep the old cloud draft intact, and never skip saving visible photos.
       var current=window.ECHStudio.getState();
       var retiredEmpty=queueVerified&&current.sku&&!items.some(function(x){return x.sku===current.sku;})&&!window.ECHStudio.photoCount();
+      if(window.ECHDrafts)await window.ECHDrafts.flush();
       if(window.ECHCloud&&!retiredEmpty)await window.ECHCloud.ready();
       if(window.ECHCloud&&window.ECHStudio.photoCount())await window.ECHCloud.flush();
       activeQueueId=it._queueId||'';document.dispatchEvent(new CustomEvent('ech:loadPrepared',{detail:it}));
@@ -195,6 +196,7 @@
     if(issues.length){handoffMessage(issues[0],true);status(issues[0],true);return;}
     var button=this, old=button.textContent, confirmed=false; button.disabled=true; button.textContent='Checking…';
     try{
+      if(window.ECHDrafts)await window.ECHDrafts.flush();
       var result=window.ECHStudio.prepareReview(); saveLocal(result.pack);
       var endpoint=String(window.ECH_REVIEW_ENDPOINT||'').trim();
       if(endpoint){
