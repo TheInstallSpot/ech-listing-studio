@@ -185,8 +185,9 @@
     await navigator.share({title:'ECH listing review — '+sku,text:'Ready for Lee to review. Nothing has been published to eBay.',files:shareFiles});
     return true;
   }
-  function removeSubmitted(queueId,sku){
-    items=items.filter(function(it){return queueId?it._queueId!==queueId:it.sku!==sku;});
+  function removeSubmitted(queueId){
+    // Never retire sibling physical jobs merely because their model/SKU matches.
+    items=items.filter(function(it){return !queueId||(it._queueId||it.queueId||it.productId)!==queueId;});
     write();
   }
 
@@ -194,7 +195,9 @@
     if(!window.ECHStudio)return;
     var issues=window.ECHStudio.reviewIssues();
     if(issues.length){handoffMessage(issues[0],true);status(issues[0],true);return;}
-    var button=this, old=button.textContent, confirmed=false; button.disabled=true; button.textContent='Checking…';
+    var button=this, old=button.textContent, confirmed=false;
+    var submittingQueueId=window.ECHStudio.getState()._draftId;
+    button.disabled=true; button.textContent='Checking…';
     try{
       if(window.ECHDrafts)await window.ECHDrafts.flush();
       var result=window.ECHStudio.prepareReview(); saveLocal(result.pack);
@@ -210,7 +213,7 @@
         var accepted=await postToHub(endpoint,result);
         confirmed=true;
         if(window.ECHCloud)window.ECHCloud.submitted();
-        removeSubmitted('',result.pack.item.sku);
+        removeSubmitted(submittingQueueId);
         handoffMessage('Sent to Lee ✓ Review '+String(accepted.reviewId||'').slice(0,8)+' is waiting. Nothing was published to eBay.');
         status('Sent to Lee for approval.');
       }else{

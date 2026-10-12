@@ -22,7 +22,7 @@ const server=http.createServer(async(req,res)=>{try{
   res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify(result));return;
  }
  if(url.pathname.startsWith('/fixture-photo/')){res.writeHead(200,{'content-type':'image/jpeg'});res.end(photos.get(url.pathname.split('/').pop())||Buffer.alloc(0));return;}
- if(url.pathname==='/evidence'&&req.method==='POST'){let b='';for await(const c of req)b+=c;await writeFile(path.join(output,'browser-results.json'),b);res.end('saved');return;}
+ if(url.pathname==='/evidence'&&req.method==='POST'){let b='';for await(const c of req)b+=c;const evidence=JSON.parse(b);const phase=String(evidence.mode||'unknown').replace(/[^a-z0-9-]+/gi,'-');await writeFile(path.join(output,phase+'.json'),b);await writeFile(path.join(output,'browser-results.json'),b);res.end('saved');return;}
  if(url.pathname==='/review-config.js'){res.setHeader('content-type','text/javascript');res.end('window.ECH_REVIEW_ENDPOINT="http://127.0.0.1:8891/mock-review";');return;}
  let relative=url.pathname==='/'?'index.html':url.pathname.slice(1);const file=path.resolve(root,relative);if(!file.startsWith(root+path.sep)){res.writeHead(403);res.end();return;}
  let body=await readFile(file);

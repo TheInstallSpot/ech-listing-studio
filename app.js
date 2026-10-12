@@ -332,8 +332,10 @@
     try{
       var s = state();
       localStorage.setItem(SAVE_KEY, JSON.stringify(s));
-      document.dispatchEvent(new Event('ech:draftChanged'));
     }catch(e){}
+    // IndexedDB photo persistence must still run when the legacy text cache
+    // is full or unavailable. It supplies its own visible failure and gate.
+    document.dispatchEvent(new Event('ech:draftChanged'));
   }
   function restore(){
     var raw; try{ raw = localStorage.getItem(SAVE_KEY); }catch(e){}

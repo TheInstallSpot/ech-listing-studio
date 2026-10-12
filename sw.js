@@ -1,6 +1,6 @@
 /* ECH Listing Studio service worker — offline cache.
    Bump CACHE when you change any file so devices pull the new version. */
-var CACHE = 'ech-studio-local-originals-v24rc1';
+var CACHE = 'ech-studio-local-originals-v24rc2';
 var ASSETS = [
   './',
   './index.html',
@@ -8,17 +8,17 @@ var ASSETS = [
   './masthead.png',
   './masthead.png?v=22',
   './app.js',
-  './app.js?v=24rc1',
-  './draft-store.js?v=24rc1',
-  './draft-local.js?v=24rc1',
-  './cloud-draft.js?v=24rc1',
+  './app.js?v=24rc2',
+  './draft-store.js?v=24rc2',
+  './draft-local.js?v=24rc2',
+  './cloud-draft.js?v=24rc2',
   './authorization-registry.js',
-  './authorization-registry.js?v=24rc1',
+  './authorization-registry.js?v=24rc2',
   './agent-queue.js',
   './pin-access.js',
   './pin-access.js?v=21',
-  './agent-queue.js?v=24rc1',
-  './builder-core.js?v=24rc1',
+  './agent-queue.js?v=24rc2',
+  './builder-core.js?v=24rc2',
   './builder-core.js',
   './manifest.webmanifest',
   './icon-192.png',

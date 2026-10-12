@@ -25,6 +25,11 @@
     }finally{clearTimeout(timeout);}
   }
   async function hash(file){return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await file.arrayBuffer()))).map(function(n){return n.toString(16).padStart(2,'0');}).join('');}
+  function photoKey(item,sha){
+    // Permissions belong to a physical job, not every item sharing its SKU.
+    // The token stays solely in this in-memory key, never in a saved snapshot.
+    return JSON.stringify([item._draftId||item.productId||'',item.reviewToken,sha]);
+  }
   async function saveNow(){
     if(recovering||recoveryFailed)throw new Error('Please wait for cloud recovery or tap Retry saving photos.');
     if(busy){await busy;return saveNow();}
@@ -33,7 +38,7 @@
     if(!token||!item.sku){if(studio.photoCount())throw new Error('Photos need a connected product before they can be saved.');return [];}
     var files=studio.exportPhotos();
     busy=(async function(){
-      var keys=await Promise.all(files.map(async function(file){return item.sku+':'+await hash(file);}));
+      var keys=await Promise.all(files.map(async function(file){return photoKey(item,await hash(file));}));
       var refs=keys.map(function(key){return cache[key];});
       for(var i=0;i<files.length;i++){
         var key=keys[i];
@@ -79,7 +84,7 @@
           if(!response.ok)throw new Error('Photo recovery failed');
           files.push(new File([await response.blob()],ref.originalName||'photo.jpeg',{type:'image/jpeg'}));
           }finally{clearTimeout(photoTimeout);}
-          delete ref.signedUrl;cache[item.sku+':'+ref.sha256]=ref;
+          delete ref.signedUrl;cache[photoKey(item,ref.sha256)]=ref;
         }
         if(generation!==recoveryGeneration||studio.getState().sku!==item.sku||studio.getState().reviewToken!==token)return;
         await studio.restoreCloud(Object.assign({},draft.item,{reviewToken:token}),files);

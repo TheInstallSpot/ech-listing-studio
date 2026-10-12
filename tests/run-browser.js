@@ -34,6 +34,15 @@
    ok(window.ECHStudio.getState().pdesc==='Paige correction for case '+i,'Case '+i+': stale cloud recovery cannot overwrite correction');
    ok(window.ECHStudio.photoCount()===1,'Case '+i+': recovery preserves captured photo');
   }
+  var setItem=Storage.prototype.setItem;
+  try{
+   Storage.prototype.setItem=function(key,value){if(key==='ech-studio-v1')throw new Error('Legacy cache full');return setItem.call(this,key,value);};
+   var correction=document.getElementById('productdesc');correction.value='Correction survives legacy cache quota';correction.dispatchEvent(new Event('input',{bubbles:true}));
+   await window.ECHDrafts.flush();
+   var quotaRecord=await window.ECHDraftStore.read(window.ECHStudio.getState()._draftId);
+   ok(quotaRecord.item.pdesc===correction.value,'Legacy text-cache quota does not suppress IndexedDB corrections');
+   ok(quotaRecord.photos.length===1,'Legacy text-cache quota preserves original photo persistence');
+  }finally{Storage.prototype.setItem=setItem;}
   var form=new FormData();form.append('mode','fail-next');await fetch('/mock-review',{method:'POST',body:form,headers:{Authorization:'Bearer fixture-5'}});
   var second=await photo('#997755');window.ECHStudio.addPhotoFiles([second]);await waitFor(function(){return window.ECHStudio.photoCount()===2;});
   var failed=false;try{await window.ECHCloud.flush();}catch(e){failed=true;}ok(failed,'Simulated cloud upload failure is reported');ok(window.ECHStudio.photoCount()===2,'Failed upload preserves both photos');await window.ECHDrafts.flush();await window.ECHCloud.flush();ok(true,'Retry completes cloud fixture save');
