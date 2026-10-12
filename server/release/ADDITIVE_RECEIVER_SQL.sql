@@ -27,7 +27,6 @@ BEGIN
 END $function$;
 REVOKE ALL ON FUNCTION public.ech_review_allowed_v24(text) FROM PUBLIC;
 
-
 CREATE OR REPLACE FUNCTION public.accept_ech_listing_review_v24(p_token_hash text, p_review_id uuid, p_listing jsonb, p_photos jsonb)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -107,9 +106,7 @@ begin
     payload=jsonb_set(payload,'{items,0}',coalesce(payload#>'{items,0}','{}'::jsonb)-'reviewToken',false)
   where id=v_token.queue_id;
   return jsonb_build_object('reviewId',p_review_id,'status','awaiting_lee_approval');
-end; $function$
-
-
+end; $function$;
 
 CREATE OR REPLACE FUNCTION public.ech_draft_state_v24(p_token_hash text, p_snapshot jsonb DEFAULT NULL::jsonb)
  RETURNS jsonb
@@ -136,9 +133,7 @@ BEGIN
  END IF;
  SELECT snapshot INTO saved FROM private.ech_photo_drafts WHERE queue_id=t.queue_id;
  RETURN coalesce(saved,'{}'::jsonb);
-END $function$
-
-
+END $function$;
 
 CREATE OR REPLACE FUNCTION public.ech_pin_queue_v24(p_token text, p_logout boolean DEFAULT false)
  RETURNS jsonb
@@ -189,9 +184,7 @@ BEGIN
     WHERE q.status='ready' AND public.ech_review_allowed_v24(t.token_hash)
     ORDER BY q.approved_at LIMIT 100) q;
   RETURN jsonb_build_object('items',result);
-END $function$
-
-
+END $function$;
 
 CREATE OR REPLACE FUNCTION public.inspect_ech_review_token_v24(p_token_hash text)
  RETURNS jsonb
@@ -221,9 +214,7 @@ begin
     'expiresAt', v_token.expires_at
   );
 end;
-$function$
-
-
+$function$;
 
 -- Additive v24 receive-only interface; publication functions are unchanged.
 REVOKE ALL ON FUNCTION public.inspect_ech_review_token_v24(text) FROM PUBLIC;
@@ -234,6 +225,5 @@ GRANT EXECUTE ON FUNCTION public.inspect_ech_review_token_v24(text) TO service_r
 GRANT EXECUTE ON FUNCTION public.ech_draft_state_v24(text,jsonb) TO service_role;
 GRANT EXECUTE ON FUNCTION public.accept_ech_listing_review_v24(text,uuid,jsonb,jsonb) TO service_role;
 GRANT EXECUTE ON FUNCTION public.ech_pin_queue_v24(text,boolean) TO service_role;
-
 NOTIFY pgrst, 'reload schema';
 COMMIT;

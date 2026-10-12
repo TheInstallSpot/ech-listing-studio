@@ -25,7 +25,8 @@ export async function createSystem({directory,baseline=false}={}){
  await db.exec('create unique index if not exists review_queue_unique on public.ech_listing_reviews(queue_id); create unique index if not exists review_photo_order on public.ech_listing_review_photos(review_id,display_order);');
  for(const family of baseline?['baseline']:['baseline','candidate']){
   const sqlDir=path.join(root,'server',family,'sql');
-  for(const f of (await fs.readdir(sqlDir)).filter(f=>f.endsWith('.sql')).sort())await db.exec(await fs.readFile(path.join(sqlDir,f),'utf8'));
+  if(family==='candidate')await db.exec(await fs.readFile(path.join(root,'server/release/ADDITIVE_RECEIVER_SQL.sql'),'utf8'));
+  else for(const f of (await fs.readdir(sqlDir)).filter(f=>f.endsWith('.sql')).sort())await db.exec(await fs.readFile(path.join(sqlDir,f),'utf8'));
  }
  const failures={upload:false,draft:false,afterCommit:false,sign:false};let lastReview=null;
  async function rpc(name,args){if(!rpcs.has(name))throw Error('Unsupported isolated RPC');const keys=Object.keys(args);const {rows}=await db.query(`select public.${name}(${keys.map((k,i)=>`${k} => $${i+1}`).join(',')}) as result`,keys.map(k=>args[k]));return rows[0].result;}
