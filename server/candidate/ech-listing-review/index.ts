@@ -89,7 +89,7 @@ type ListingPacket = {
 type TokenInspection = {
   queueId: string; recommendationId: string; sku: string;
   authorization: { sku?: string; saleUnit?: string; saleUnitLabel?: string;
-    availableQuantity?: string; fulfillment?: string; targetPrice?: string; ebayCategoryId?: string; };
+    availableQuantity?: string; fulfillment?: string; targetPrice?: string; ebayCategoryId?: string; categoryPendingLee?: boolean; };
 };
 function packetError(packet: ListingPacket, expected: TokenInspection) {
   const item = packet.item;
@@ -117,7 +117,7 @@ function packetError(packet: ListingPacket, expected: TokenInspection) {
     return 'The available quantity does not match Lee’s approval.';
   if (item.fulfillment !== expected.authorization.fulfillment) return 'The fulfillment type does not match Lee’s approval.';
   if (money(item.targetPrice) !== money(expected.authorization.targetPrice)) return 'The target price does not match Lee’s approval.';
-  if (!/^\d{1,12}$/.test(String(expected.authorization.ebayCategoryId || '')))
+  if (!/^\d{1,12}$/.test(String(expected.authorization.ebayCategoryId || '')) && expected.authorization.categoryPendingLee !== true)
     return 'The exact eBay category is missing from Lee’s approval.';
   if (String(item.ebayCategoryId || '') !== expected.authorization.ebayCategoryId)
     return 'The eBay category changed after Lee approved it.';
@@ -346,6 +346,12 @@ Deno.serve(async (request) => {
   if (packet.item && (packet.item.targetPrice === undefined || packet.item.targetPrice === null || packet.item.targetPrice === '')) {
     packet.item.targetPrice = expected.authorization.targetPrice;
   }
+  // Recover missing routing metadata only from this physical job's trusted approval.
+  // Never override a client category or infer one from product text.
+  if (packet.item && !packet.item.ebayCategoryId && /^\d{1,12}$/.test(String(expected.authorization.ebayCategoryId || ''))) {
+    packet.item.ebayCategoryId = expected.authorization.ebayCategoryId;
+  }
+  if (packet.item && !packet.item.ebayCategoryId && expected.authorization.categoryPendingLee === true) packet.item.ebayCategoryId = '';
   const invalid = packetError(packet, expected);
   if (invalid) return json({ error: invalid }, 422, origin);
   packet.item = cleanItem(packet.item!);
@@ -356,6 +362,7 @@ Deno.serve(async (request) => {
   packet.warnings = Array.isArray(packet.item.spec) && packet.item.spec.some((row) =>
     Array.isArray(row) && text(row[0],500) && text(row[1],1000))
     ? [] : ['Technical specifications are incomplete. Do not invent them.'];
+  if (expected.authorization.categoryPendingLee === true && !expected.authorization.ebayCategoryId) packet.warnings.push('Exact eBay category awaits management verification. Physical preparation only; offer preparation and publication remain blocked.');
   if ((packet.photoManifest as unknown[]).length !== photoFiles.length)
     return json({ error: 'The photo manifest does not match the uploaded photos.' }, 422, origin);
   const reviewId = crypto.randomUUID();
