@@ -173,6 +173,7 @@ function esc(s: unknown){
     var s=typedListing(input);
     var section=function(t: string,b: string){return '<section style="padding:22px 5%;"><h2 style="margin:0 0 14px;padding-bottom:9px;border-bottom:3px solid #d7a72d;color:#071b33;font-size:22px;">'+esc(t)+'</h2>'+b+'</section>';};
     var condition=({N1:'New and unused. Packaging may have been opened only for photography; this does not mean the item has been used.',O2:'Used equipment.',D3:'Dealer-demo equipment.'} as Record<string,string>)[s.cond]||'Condition requires Lee’s review.';
+    if(s.cond==='N1'&&s.packaging==='open_box')condition='New and unused. Packaging is open; the item has not been used.';
     var verified=(s.ver||[]).filter(Boolean);
     var contents='<ul style="padding-left:22px;">'+(s.box||[]).filter(Boolean).map(function(v){return '<li style="margin:7px 0;">'+esc(v)+'</li>';}).join('')+'</ul>';
     var warning=(s.isPassive===true||s.isPassive==='true')?'Passive speaker: an external amplifier or receiver is required. Amplification is not included. Confirm the sale unit and included items before purchase.':'Confirm the exact model, sale unit and listed contents before purchase. Only the items listed as included are supplied.';
@@ -186,7 +187,7 @@ function esc(s: unknown){
 
   function ebayTitle(input: Record<string, unknown>){
     var s=typedListing(input);
-    var condition=({N1:"New",O2:"Used",D3:"Dealer Demo"} as Record<string,string>)[s.cond]||"";
+    var condition=({N1:s.packaging==='open_box'?"New Open Box":"New",O2:"Used",D3:"Dealer Demo"} as Record<string,string>)[s.cond]||"";
     var what=String(s.what||"").replace(/(\d+(?:\.\d+)?)-inch\b/gi,"$1 in");
     return [s.brand,s.part,what,condition,s.sold,s.cond?"("+s.cond+")":""].filter(Boolean).join(" ").replace(/\s+/g," ").trim();
   }

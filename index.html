@@ -81,7 +81,9 @@
     <p id="physicalQuantity">Available quantity needs confirmation.</p><label><input type="checkbox" id="quantityConfirmed"> I checked the available quantity and included contents.</label>
     <div class="conds">
       <label class="cond n1"><input type="radio" name="cond" value="N1">
-        <span class="code">N1</span><span class="cd"><b>New and unused</b><span>Opening the box only for photos is okay.</span></span><span class="tick"></span></label>
+        <span class="code">N1</span><span class="cd"><b>New and unused</b><span>Unused; verify the packaging separately.</span></span><span class="tick"></span></label>
+      <label class="cond n1"><input type="radio" name="cond" value="OB">
+        <span class="code">OB</span><span class="cd"><b>Open Box / Unused</b><span>Packaging opened; the item has never been used.</span></span><span class="tick"></span></label>
       <label class="cond o2"><input type="radio" name="cond" value="O2">
         <span class="code">O2</span><span class="cd"><b>Used</b><span>The item has been used, not just unboxed.</span></span><span class="tick"></span></label>
       <label class="cond d3"><input type="radio" name="cond" value="D3">
@@ -202,15 +204,15 @@
   <button class="next" id="navNext" type="button">Next  →</button>
 </div></nav>
 
-<script src="builder-core.js?v=24rc5"></script>
-<script src="draft-store.js?v=24rc5"></script>
-<script src="app.js?v=24rc5"></script>
-<script src="authorization-registry.js?v=24rc5"></script>
-<script src="review-config.js?v=24rc5"></script>
-<script src="pin-access.js?v=24rc5"></script>
-<script src="agent-queue.js?v=24rc5"></script>
-<script src="cloud-draft.js?v=24rc5"></script>
-<script src="draft-local.js?v=24rc5"></script>
+<script src="builder-core.js?v=24rc6"></script>
+<script src="draft-store.js?v=24rc6"></script>
+<script src="app.js?v=24rc6"></script>
+<script src="authorization-registry.js?v=24rc6"></script>
+<script src="review-config.js?v=24rc6"></script>
+<script src="pin-access.js?v=24rc6"></script>
+<script src="agent-queue.js?v=24rc6"></script>
+<script src="cloud-draft.js?v=24rc6"></script>
+<script src="draft-local.js?v=24rc6"></script>
 <style>input::placeholder,textarea::placeholder{color:#737373;opacity:1;}</style>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js?v=22').then(function(r){return r.update();}).catch(function(){});}</script>
 </body>

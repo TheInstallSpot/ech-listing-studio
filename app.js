@@ -14,7 +14,7 @@
   var productGeneration=0;
   var draftId="", hasCorrections=false;
 
-  function cond(){ var r = $('input[name=cond]:checked'); return r ? r.value : ""; }
+  function cond(){ var r = $('input[name=cond]:checked'); return r ? (r.value === "OB" ? "N1" : r.value) : ""; }
 
   /* =======================================================
      STEP NAVIGATION
@@ -240,7 +240,7 @@
   $$('#panel-details input, #panel-details textarea, #panel-details select').forEach(function(el){
     if(el.id!=='titlePreview') el.addEventListener('input', onChange);
   });
-  document.addEventListener('change', function(e){ if(e.target.id==='packaging'||e.target.id==='quantityConfirmed')onChange(e);if(e.target.name==='cond'){ onChange(e); drawShots(); } });
+  document.addEventListener('change', function(e){ if(e.target.id==='packaging'||e.target.id==='quantityConfirmed')onChange(e);if(e.target.name==='cond'){ if(e.target.value==='OB')$('#packaging').value='open_box'; else if(e.target.value==='N1'&&$('#packaging').value==='open_box')$('#packaging').value='unknown'; var copy=$('#productdesc').value;if(cond()==='N1')$('#productdesc').value=copy.replace(/^One used /i,'One new and unused ');else if(cond()==='O2')$('#productdesc').value=copy.replace(/^One new and unused /i,'One used ');onChange(e); drawShots(); } });
 
   /* =======================================================
      STEP 4 — FINISH  (copy out)
@@ -346,8 +346,7 @@
     if(s){
       draftId=s._draftId||s.productId||s.sku||crypto.randomUUID();hasCorrections=true;
       var hasSavedProduct=!!(s.sku||s.productId||s.brand||s.part||s.what||s.title||s.pdesc);
-      var r = hasSavedProduct ? document.querySelector('input[name=cond][value="'+s.cond+'"]') : null; if(r) r.checked=true;
-      if(!hasSavedProduct) document.querySelectorAll('input[name=cond]').forEach(function(x){ x.checked=false; });
+      document.querySelectorAll('input[name=cond]').forEach(function(x){ x.checked=false; });
       $('#quantityConfirmed').checked=s.quantityConfirmed===true;$('#physicalQuantity').textContent='Available quantity: '+(s.availableQuantity||'not entered')+' buyer unit(s).';
       ['serialNumber','packaging','defects'].forEach(function(k){$('#'+k).value=s[k]||'';});
       $('#sku').value=s.sku||''; $('#productId').value=s.productId||'';
@@ -464,8 +463,8 @@
       });}));
       if(generation!==productGeneration)return;
       if(forceLocal||!hasCorrections)loadPreparedItem(Object.assign({},s,{_draftId:draftId}));
-      if(forceLocal||!hasCorrections)document.querySelectorAll('input[name=cond]').forEach(function(r){r.checked=r.value===s.cond;});
-      if(forceLocal||!photos.length)photos=restored;onChange();drawShots();go(2);
+      if(forceLocal||!hasCorrections)document.querySelectorAll('input[name=cond]').forEach(function(r){r.checked=false;});
+      if(forceLocal||!photos.length)photos=restored;onChange();drawShots();go(cond()?2:1);
     }
   };
   go(1);
