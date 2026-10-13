@@ -17,7 +17,7 @@
   var correctionNote=document.createElement('p');correctionNote.id='correctionInstructions';correctionNote.setAttribute('role','status');correctionNote.hidden=true;activeLabel.after(correctionNote);
   function showCorrection(it){correctionNote.textContent=it&&it.correctionNote?'Lee returned this item: '+it.correctionNote:'';correctionNote.hidden=!correctionNote.textContent;}
 
-  function showActive(){var s=window.ECHStudio.getState();activeLabel.textContent=s.sku?'Working on: '+[s.brand,s.part].filter(Boolean).join(' ')+' — '+s.sku:'Choose a product above to begin.';}
+  function showActive(){var s=window.ECHStudio.getState();activeLabel.textContent=s.sku?'Working on: '+[s.brand,s.part].filter(Boolean).join(' '):'Choose a product above to begin.';}
   function lockWork(locked){document.querySelectorAll('.panel,.rail,#navNext,#navBack').forEach(function(el){el.inert=locked;});}
   document.addEventListener('ech:draftChanged',showActive);
 
@@ -50,7 +50,7 @@
     items.forEach(function(it,i){
       var auth=authorization(it); if(!auth.allowed)blocked++;
       var o=document.createElement('option'); o.value=String(i);
-      o.textContent=(auth.allowed?'':'BLOCKED — ')+(it.queueLabel || ((it.sku?it.sku+' — ':'')+[it.brand,it.part,it.what].filter(Boolean).join(' ')));
+      o.textContent=(auth.allowed?'':'BLOCKED — ')+(it.queueLabel || [it.brand,it.part,it.what].filter(Boolean).join(' '));
       o.className=auth.allowed?'':'queue-blocked'; sel.appendChild(o);
     });
     var currentId=window.ECHStudio.getState()._draftId;
