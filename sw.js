@@ -1,25 +1,25 @@
 /* ECH Listing Studio service worker — offline cache.
    Bump CACHE when you change any file so devices pull the new version. */
-var CACHE = 'ech-studio-local-originals-v24rc8';
+var CACHE = 'ech-studio-local-originals-v24rc9';
 var ASSETS = [
   './',
-  './review-config.js?v=24rc8',
+  './review-config.js?v=24rc9',
   './index.html',
   './styles.css',
   './masthead.png',
   './masthead.png?v=22',
   './app.js',
-  './app.js?v=24rc8',
-  './draft-store.js?v=24rc8',
-  './draft-local.js?v=24rc8',
-  './cloud-draft.js?v=24rc8',
+  './app.js?v=24rc9',
+  './draft-store.js?v=24rc9',
+  './draft-local.js?v=24rc9',
+  './cloud-draft.js?v=24rc9',
   './authorization-registry.js',
-  './authorization-registry.js?v=24rc8',
+  './authorization-registry.js?v=24rc9',
   './agent-queue.js',
   './pin-access.js',
-  './pin-access.js?v=24rc8',
-  './agent-queue.js?v=24rc8',
-  './builder-core.js?v=24rc8',
+  './pin-access.js?v=24rc9',
+  './agent-queue.js?v=24rc9',
+  './builder-core.js?v=24rc9',
   './builder-core.js',
   './manifest.webmanifest',
   './icon-192.png',
@@ -46,8 +46,9 @@ self.addEventListener('fetch', function(e){
   var url = new URL(e.request.url);
   // App shell + assets: cache-first (works fully offline).
   if(url.origin === self.location.origin){
+    if(url.pathname.endsWith('/release.json')){e.respondWith(fetch(e.request,{cache:'no-store'}));return;}
     if(e.request.mode==='navigate'){
-      e.respondWith(fetch(e.request).then(function(res){
+      e.respondWith(fetch(e.request,{cache:'no-store'}).then(function(res){
         if(res.ok){var copy=res.clone();caches.open(CACHE).then(function(c){c.put(e.request,copy);});}
         return res;
       }).catch(function(){return caches.match(e.request).then(function(hit){return hit||caches.match('./index.html');});}));

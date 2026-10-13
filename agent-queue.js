@@ -1,5 +1,6 @@
 (function(){
   'use strict';
+  var APP_RELEASE=new URL(document.currentScript.src,location.href).searchParams.get('v')||'unversioned';
   var KEY='ech-prepared-items-v1';
   var TOKEN_KEY='ech-ready-queue-token-v1';
   var REVIEW_KEY='ech-review-ready-v1';
@@ -74,14 +75,17 @@
         if(!it||typeof it!=='object')return;
         var queueId=row.queueId||'', existing=items.findIndex(function(current){return queueId&&current._queueId===queueId;});
         var merged=Object.assign({},it,{_queueId:queueId,_recommendationId:row.recommendationId||'',_approvedAt:row.approvedAt||''});
-        if(!authorization(merged).allowed)return;
+        // Keep unavailable jobs visible so queue problems cannot look like missing work.
         if(existing>=0)items[existing]=merged; else {items.push(merged);added++;}
       });
     });
     write();
     return added;
   }
+  function checkAppUpdate(){return fetch('release.json',{cache:'no-store'}).then(function(r){if(!r.ok)throw Error('Update check unavailable');return r.json();}).then(function(meta){if(meta.release!==APP_RELEASE && /^[a-zA-Z0-9.-]+$/.test(meta.release||'')){var n=$('appUpdateNotice');if(!n){n=document.createElement('p');n.id='appUpdateNotice';$('queueStatus').after(n);}n.textContent='An app update is available. Finish and send your current item, then ';var a=document.createElement('a');a.textContent='open the updated app';a.target='_blank';a.rel='noopener';a.href=location.pathname+'?release='+encodeURIComponent(meta.release);n.appendChild(a);}}).catch(function(){});}
+  checkAppUpdate();
   function syncApprovals(quiet){
+    checkAppUpdate();
     var token=queueToken();
     var pinConnected=window.ECHPin&&window.ECHPin.connected();
     if(!token&&!pinConnected){ window.ECHPin.prompt(); if(!quiet)status('Enter your PIN above to connect this device.',true); return Promise.resolve(); }
@@ -230,7 +234,7 @@
       }
     }catch(err){
       if(err&&err.name==='AbortError')handoffMessage('Sending was canceled. Nothing was published.',true);
-      else handoffMessage((err&&err.message)||'Could not send this review. Nothing was published.',true);
+      else handoffMessage(/constraint|relation|SQL|database/i.test((err&&err.message)||'')?'The review could not be saved. Your photos remain here. Ask Lee to check the receiving service before trying again.':((err&&err.message)||'Could not send this review. Your photos remain here. Nothing was published.'),true);
     }finally{lockWork(false);$('preparedSelect').disabled=false;$('resetWork').disabled=false;button.disabled=confirmed;button.textContent=confirmed?'Sent to Lee ✓':old;}
   });
 
