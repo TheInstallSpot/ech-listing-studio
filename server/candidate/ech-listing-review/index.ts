@@ -1,6 +1,8 @@
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const BUCKET = 'ech-review-photos';
+const ORIGINAL_BUCKET = 'ech-original-photos';
+const MAX_ORIGINAL_BYTES = 32 * 1024 * 1024;
 import {build, ebayTitle} from '../../shared/listing-core.ts';
 const ALLOWED_ORIGIN = Deno.env.get('ECH_STUDIO_ORIGIN') || 'https://theinstallspot.github.io';
 const MAX_LISTING_BYTES = 262_144;
@@ -80,6 +82,7 @@ function integer(value: unknown) {
 type ListingPacket = {
   queueId?: unknown;
   warnings?: unknown;
+  originalArchive?: unknown;
   schemaVersion?: unknown; reviewStatus?: unknown; preparedAt?: unknown; ebayTitle?: unknown;
   descriptionHtml?: unknown; photoManifest?: unknown; issues?: unknown; item?: Record<string, unknown>;
 };
@@ -97,6 +100,11 @@ function packetError(packet: ListingPacket, expected: TokenInspection) {
     const approved = (expected.authorization as Record<string, unknown>)[key];
     if (approved && String(item[key] || '') !== String(approved)) return 'The approved product identity changed.';
   }
+  for (const key of ['brand','part','what','title','hook','pdesc','mounting','sold','packaging','defects','serialNumber','compatibilityNote','catalogNote']) {
+    if (item[key] !== undefined && typeof item[key] !== 'string') return 'Product and inspection facts must be verified text.';
+  }
+  if (item.spec !== undefined && (!Array.isArray(item.spec) || item.spec.some(row => !Array.isArray(row) || row.length !== 2 || row.some(value => typeof value !== 'string'))))
+    return 'Technical specifications must be verified name/value text.';
   if (item.quantityConfirmed !== true) return 'Confirm the physical quantity and included contents.';
   if (packet.queueId !== expected.queueId)
     return 'The review is for a different physical job.';
@@ -144,6 +152,73 @@ function jpegDimensions(buffer: ArrayBuffer) {
   }
   return null;
 }
+function originalFormat(buffer: ArrayBuffer) {
+  const b = new Uint8Array(buffer), ascii = (start: number, end: number) => String.fromCharCode(...b.slice(start,end));
+  if (b.length >= 16 && b[0] === 255 && b[1] === 216 && jpegDimensions(buffer)) return { mime: 'image/jpeg', extension: 'jpeg' };
+  if (b.length >= 33 && [137,80,78,71,13,10,26,10].every((v,i) => b[i] === v) && ascii(12,16) === 'IHDR') return { mime: 'image/png', extension: 'png' };
+  if (b.length >= 16 && ascii(0,4) === 'RIFF' && ascii(8,12) === 'WEBP') return { mime: 'image/webp', extension: 'webp' };
+  if (b.length >= 16 && ascii(4,8) === 'ftyp') {
+    const brand = ascii(8,12);
+    if (['heic','heix','hevc','hevx'].includes(brand)) return { mime: 'image/heic', extension: 'heic' };
+    if (['mif1','msf1'].includes(brand)) return { mime: 'image/heif', extension: 'heif' };
+  }
+  return null;
+}
+async function boundedOriginalRequest(request: Request) {
+  const max = MAX_ORIGINAL_BYTES + 65536, reader = request.body?.getReader();
+  if (!reader || Number(request.headers.get('content-length') || 0) > max) throw new Error('Original exceeds 32 MB.');
+  const chunks: Uint8Array[] = []; let size = 0;
+  const timer = setTimeout(() => { void reader.cancel(); },60000);
+  try { while (true) { const part = await reader.read(); if (part.done) break; size += part.value.length;
+    if (size > max) { await reader.cancel(); throw new Error('Original exceeds 32 MB.'); } chunks.push(part.value); } } finally { clearTimeout(timer); }
+  const body = new Uint8Array(size); let offset = 0;
+  for (const chunk of chunks) { body.set(chunk, offset); offset += chunk.length; }
+  return new Request(request.url, { method: request.method, headers: request.headers, body });
+}
+async function saveOriginal(form: FormData, expected: TokenInspection, tokenHash: string) {
+  const file = form.get('photo'), normalized = String(form.get('normalizedSha256') || '');
+  if (!(file instanceof File) || file.size < 1 || file.size > MAX_ORIGINAL_BYTES || !/^[a-f0-9]{64}$/.test(normalized))
+    throw new Error('A supported original under 32 MB and its saved review photo are required.');
+  const buffer = await file.arrayBuffer(), format = originalFormat(buffer);
+  if (!format) throw new Error('Use a JPEG, PNG, WebP, HEIC or HEIF original.');
+  const normalizedPath = `${expected.sku}/drafts/${expected.queueId}/${normalized}.jpeg`;
+  const clean = await fetch(`${SUPABASE_URL}/storage/v1/object/authenticated/${BUCKET}/${normalizedPath}`, {
+    headers: { apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}` }, signal: AbortSignal.timeout(30000),
+  });
+  if (!clean.ok) throw new Error('Save the review photo before its original.');
+  const normalizedBytes = await clean.arrayBuffer();
+  if (normalizedBytes.byteLength > MAX_PHOTO_BYTES || await sha256(normalizedBytes) !== normalized) throw new Error('Saved review photo mismatch.');
+  const hash = await sha256(buffer), path = `${expected.sku}/originals/${expected.queueId}/${hash}.${format.extension}`;
+  const saved = await fetch(`${SUPABASE_URL}/storage/v1/object/${ORIGINAL_BUCKET}/${path}`, {
+    method: 'POST', headers: { apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}`, 'content-type': format.mime, 'x-upsert': 'false' },
+    body: buffer, signal: AbortSignal.timeout(60000),
+  });
+  if (!saved.ok) {
+    // Lost upload replies and duplicate sends verify the existing object; never overwrite it.
+    const previous = await fetch(`${SUPABASE_URL}/storage/v1/object/authenticated/${ORIGINAL_BUCKET}/${path}`, {
+      headers: { apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}` }, signal: AbortSignal.timeout(30000),
+    });
+    if (!previous.ok) throw new Error('Original storage is not confirmed. Keep the original on this device.');
+    const bytes = await previous.arrayBuffer();
+    if (bytes.byteLength !== buffer.byteLength || await sha256(bytes) !== hash) throw new Error('Original checksum mismatch.');
+  }
+  return rpc('save_ech_original_photo_v25', { p_token_hash: tokenHash, p_normalized_sha256: normalized, p_sha256: hash,
+    p_storage_path: path, p_original_name: file.name.replace(/[\x00-\x1f\x7f]/g,'').slice(0,200) || 'Original photo',
+    p_mime_type: format.mime, p_size_bytes: buffer.byteLength });
+}
+async function originalsFor(queueId: string) {
+  return await rpc('read_ech_original_photos_v25', { p_queue_ids: [queueId] }) as Record<string, unknown>[];
+}
+async function signedOriginal(original: Record<string, unknown>) {
+  const response = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${ORIGINAL_BUCKET}/${original.storagePath}`, {
+    method: 'POST', headers: { apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ expiresIn: 900 }), signal: AbortSignal.timeout(15000),
+  });
+  if (!response.ok) throw new Error('Original recovery unavailable.');
+  const signed = await response.json();
+  return { ...original, signedUrl: `${SUPABASE_URL}/storage/v1${signed.signedURL}` };
+}
+
 Deno.serve(async (request) => {
   const origin = request.headers.get('origin');
   if (request.method === 'OPTIONS') {
@@ -164,7 +239,10 @@ Deno.serve(async (request) => {
   let form: FormData;
   let bodyTimer: ReturnType<typeof setTimeout> | undefined;
   try {
-    form = await Promise.race([request.formData(), new Promise<never>((_, reject) => {
+    form = await Promise.race([(async () => {
+      if (new URL(request.url).searchParams.get('mode') === 'original') request = await boundedOriginalRequest(request);
+      return request.formData();
+    })(), new Promise<never>((_, reject) => {
       bodyTimer = setTimeout(() => reject(new Error('upload timeout')), 60000);
     })]);
   } catch { return json({ error: 'The photo transfer did not finish. Keep this page open; your photos have not been cleared.' }, 408, origin); }
@@ -185,6 +263,12 @@ Deno.serve(async (request) => {
     return json({ error: 'The review token is expired or already used.' }, 401, origin);
   }
   const mode = form.get('mode');
+  if (mode === 'original') {
+    if (new URL(request.url).searchParams.get('mode') !== 'original') return json({ error: 'Bounded original transfer required.' }, 422, origin);
+    try { return json({ original: await saveOriginal(form, expected, tokenHash), saved: true }, 201, origin); }
+    catch (error) { return json({ error: error instanceof Error ? error.message : 'Original archive not confirmed. Keep this page open.' }, 503, origin); }
+  }
+
   if (mode === 'photo') {
     try {
       const file = form.get('photo');
@@ -224,7 +308,8 @@ Deno.serve(async (request) => {
           photo.signedUrl = `${SUPABASE_URL}/storage/v1${signed.signedURL}`;
         }
       }
-      return json({ snapshot, saved: true }, 200, origin);
+      const originals = mode === 'draft-read' ? await Promise.all((await originalsFor(expected.queueId)).map(signedOriginal)) : undefined;
+      return json({ snapshot, originals, saved: true }, 200, origin);
     } catch { return json({ error: 'Cloud draft not confirmed. Keep this page open and retry.' }, 503, origin); }
   }
   const listingFile = form.get('listing');
@@ -294,6 +379,10 @@ Deno.serve(async (request) => {
       metadata.push({ displayOrder: index, storagePath, originalName: safeName, mimeType: 'image/jpeg',
         sizeBytes: file.size, sha256: await sha256(buffer), width: dimensions.width, height: dimensions.height });
     }
+    const originals = await originalsFor(expected.queueId);
+    const covered = metadata.filter(photo => originals.some(original => original.normalizedSha256 === photo.sha256)).length;
+    packet.originalArchive = { fullOriginals: originals.length, coveredReviewPhotos: covered, reviewPhotos: metadata.length };
+    if (covered < metadata.length) packet.warnings = [...(packet.warnings as string[]), 'Full originals are unavailable for some legacy photos; normalized review photos are retained.'];
     console.info('review-stage: saving-review');
     acceptanceStarted = true;
     const accepted = await rpc('accept_ech_listing_review_v24', {

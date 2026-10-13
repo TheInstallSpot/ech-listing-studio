@@ -9,7 +9,7 @@
   function enqueue(){
     if(restoring)return;
     var snapshot=studio.snapshotDraft();if(!snapshot.item.sku&&!snapshot.item.part)return;
-    serial=serial.catch(function(){}).then(function(){return store.write(snapshot);}).then(function(){lastError=null;showOriginals().catch(function(){});say('Originals and changes saved on this device. Send to Lee for cloud receipt.');},function(e){lastError=e;say('Not saved on this device. Keep this page open; free storage and retry.');});
+    serial=serial.catch(function(){}).then(function(){return store.write(snapshot);}).then(function(){lastError=null;showOriginals().catch(function(){});say('Originals and changes saved on this device. Check the cloud confirmation below.');},function(e){lastError=e;say('Not saved on this device. Keep this page open; free storage and retry.');});
   }
   async function recover(){
     var g=++generation;restoring=true;recoveryFailed=false;

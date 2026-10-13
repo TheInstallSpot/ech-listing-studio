@@ -1,6 +1,7 @@
 import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import {createHash} from 'node:crypto';
 import {createSystem,root,origin} from './system.mjs';
 const directory=path.join(root,'tests/server-runtime/.runtime',new URL(origin).port);
 let system=await createSystem({directory});await system.seedPin();
@@ -16,7 +17,7 @@ const server=http.createServer(async(req,res)=>{try{
  async function body(){const chunks=[];let n=0;for await(const c of req){n+=c.length;if(n>26*1024*1024)throw Error('Local test input too large');chunks.push(c);}return Buffer.concat(chunks);}
  function json(data,status=200){res.writeHead(status,{'content-type':'application/json'});res.end(JSON.stringify(data));}
  if(u.pathname==='/review'||u.pathname==='/pin'){
-  const headers=new Headers(req.headers);const bytes=await body();const request=new Request(origin+u.pathname,{method:req.method,headers,body:req.method==='OPTIONS'?undefined:bytes});
+  const headers=new Headers(req.headers);const bytes=await body();const request=new Request(origin+u.pathname+u.search,{method:req.method,headers,body:req.method==='OPTIONS'?undefined:bytes});
   const response=await system[u.pathname==='/review'?'review':'pin'](request);res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));return;
  }
  if(u.pathname.startsWith('/storage/v1/')){
@@ -32,7 +33,9 @@ const server=http.createServer(async(req,res)=>{try{
  }
  if(u.pathname==='/__test/receipts'){
   const {rows}=await system.db.query('select id,queue_id,review_status,photo_count,listing,listing_id,published_at from public.ech_listing_reviews order by received_at');
-  return json({reviews:rows.map(r=>({...r,listing:{item:{sku:r.listing.item.sku,productId:r.listing.item.productId,pdesc:r.listing.item.pdesc,serialRecorded:!!r.listing.item.serialNumber},descriptionHtml:r.listing.descriptionHtml}}))});
+  const originals=rows.length?await system.rpc('read_ech_original_photos_v25',{p_queue_ids:rows.map(r=>r.queue_id)}):[];
+  for(const original of originals){const bytes=await fs.readFile(system.diskPath('ech-original-photos/'+original.storagePath));original.actualSha256=createHash('sha256').update(bytes).digest('hex');}
+  return json({originals,reviews:rows.map(r=>({...r,listing:{item:{sku:r.listing.item.sku,productId:r.listing.item.productId,pdesc:r.listing.item.pdesc,serialRecorded:!!r.listing.item.serialNumber},descriptionHtml:r.listing.descriptionHtml}}))});
  }
  if(u.pathname==='/__test/evidence'&&req.method==='POST'){
   if(req.headers.origin!==origin)return json({error:'Origin forbidden'},403);

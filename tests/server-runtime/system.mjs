@@ -10,13 +10,13 @@ export const root=path.resolve(new URL('../..',import.meta.url).pathname);
 export const digest=s=>createHash('sha256').update(s).digest('hex');
 export const origin='http://127.0.0.1:'+(process.env.ECH_LOCAL_PORT||8892);
 const primary={ech_ready_products:'id',ech_listing_reviews:'id',ech_listing_review_photos:'id',ech_listing_audit_log:'id',ech_review_tokens:'queue_id',ech_photo_drafts:'queue_id',ech_pin_account:'id',ech_pin_sessions:'token_hash'};
-const rpcs=new Set(['inspect_ech_review_token','ech_review_receipt','ech_draft_state','accept_ech_listing_review','ech_pin_login','ech_pin_queue','inspect_ech_review_token_v24','ech_draft_state_v24','accept_ech_listing_review_v24','ech_pin_queue_v24']);
+const rpcs=new Set(['inspect_ech_review_token','ech_review_receipt','ech_draft_state','accept_ech_listing_review','ech_pin_login','ech_pin_queue','inspect_ech_review_token_v24','ech_draft_state_v24','accept_ech_listing_review_v24','ech_pin_queue_v24','save_ech_original_photo_v25','read_ech_original_photos_v25']);
 export async function createSystem({directory,baseline=false}={}){
  const data=directory||await fs.mkdtemp('/private/tmp/ech-real-server-');
  await fs.mkdir(data,{recursive:true});
  const db=new PGlite(path.join(data,'pgdata'),{extensions:{pgcrypto}});await db.waitReady;
  await db.exec("create schema if not exists private; create schema if not exists auth; create schema if not exists extensions; create extension if not exists pgcrypto with schema extensions;");
- await db.exec("do $$ begin if not exists(select 1 from pg_roles where rolname='service_role') then create role service_role; end if; end $$;");
+ await db.exec("do $$ begin if not exists(select 1 from pg_roles where rolname='service_role') then create role service_role; end if; if not exists(select 1 from pg_roles where rolname='anon') then create role anon; end if; if not exists(select 1 from pg_roles where rolname='authenticated') then create role authenticated; end if; end $$;");
  await db.exec("create or replace function auth.role() returns text language sql as $$select current_setting('request.jwt.claim.role',true)$$; set request.jwt.claim.role='service_role';");
  const columns=JSON.parse(await fs.readFile(path.join(root,'server/baseline/columns.json'),'utf8'));
  const tables=new Map();for(const c of columns){const key=c.table_schema+'.'+c.table_name;if(!tables.has(key))tables.set(key,[]);tables.get(key).push(c);}
@@ -28,9 +28,11 @@ export async function createSystem({directory,baseline=false}={}){
   if(family==='candidate')await db.exec(await fs.readFile(path.join(root,'server/release/ADDITIVE_RECEIVER_SQL.sql'),'utf8'));
   else for(const f of (await fs.readdir(sqlDir)).filter(f=>f.endsWith('.sql')).sort())await db.exec(await fs.readFile(path.join(sqlDir,f),'utf8'));
  }
+ await db.exec("create schema if not exists storage;create table if not exists storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);");
+ await db.exec(await fs.readFile(path.join(root,'server/release/ECH_ORIGINAL_ARCHIVE.sql'),'utf8'));
  const failures={upload:false,draft:false,afterCommit:false,sign:false};let lastReview=null;
  async function rpc(name,args){if(!rpcs.has(name))throw Error('Unsupported isolated RPC');const keys=Object.keys(args);const {rows}=await db.query(`select public.${name}(${keys.map((k,i)=>`${k} => $${i+1}`).join(',')}) as result`,keys.map(k=>args[k]));return rows[0].result;}
- function diskPath(key){const target=path.resolve(data,'photos',key);if(!target.startsWith(path.resolve(data,'photos')+path.sep))throw Error('Invalid storage path');return target;}
+ function diskPath(key){if(!/^(ech-review-photos|ech-original-photos)\//.test(key))key='ech-review-photos/'+key;const target=path.resolve(data,'photos',key);if(!target.startsWith(path.resolve(data,'photos')+path.sep))throw Error('Invalid storage path');return target;}
  const reply=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json'}});
  async function bridge(url,opts={}){
   const u=new URL(url);if(!['https://isolated-ech.invalid',origin].includes(u.origin))throw Error('External network is disabled in isolated receiver');
@@ -42,11 +44,12 @@ export async function createSystem({directory,baseline=false}={}){
   }
   const prefix='/storage/v1/object/';if(!u.pathname.startsWith(prefix))throw Error('Unsupported isolated transport');
   const rest=u.pathname.slice(prefix.length);const mode=rest.startsWith('sign/')?'sign':rest.startsWith('authenticated/')?'get':'object';
-  const withBucket=mode==='object'?rest:rest.slice(mode==='sign'?5:14);const key=decodeURIComponent(withBucket.replace(/^ech-review-photos\//,''));
-  if(mode==='sign'){if(failures.sign){failures.sign=false;return reply({},503);}await fs.access(diskPath(key));return reply({signedURL:'/object/authenticated/ech-review-photos/'+key});}
+  const withBucket=mode==='object'?rest:rest.slice(mode==='sign'?5:14);const key=decodeURIComponent(withBucket);const bucket=withBucket.split('/')[0];
+  if(mode==='sign'){if(failures.sign){failures.sign=false;return reply({},503);}await fs.access(diskPath(key));return reply({signedURL:'/object/authenticated/'+key});}
   if(mode==='get'){try{return new Response(await fs.readFile(diskPath(key)),{headers:{'content-type':'image/jpeg'}});}catch{return reply({},404);}}
   if(opts.method==='DELETE'){for(const k of JSON.parse(opts.body).prefixes)await fs.unlink(diskPath(k)).catch(()=>{});return reply({});}
   if(failures.upload){failures.upload=false;return reply({},503);}
+  if(opts.headers?.['x-upsert']==='false'){try{await fs.access(diskPath(key));return reply({message:'already exists'},409);}catch{}}
   const bytes=opts.body instanceof ArrayBuffer?Buffer.from(opts.body):Buffer.from(await opts.body.arrayBuffer());const file=diskPath(key);await fs.mkdir(path.dirname(file),{recursive:true});await fs.writeFile(file,bytes);return reply({Key:key},200);
  }
  function load(source,extra=''){

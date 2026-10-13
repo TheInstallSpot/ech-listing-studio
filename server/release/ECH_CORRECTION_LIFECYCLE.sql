@@ -81,6 +81,9 @@ BEGIN
    VALUES(p_next_queue_id,next_recommendation,r.sku,encode(extensions.digest(p_review_token,'sha256'),'hex'),
     t.authorization_data,now()+interval '7 days');
   INSERT INTO private.ech_photo_drafts(queue_id,snapshot) VALUES(p_next_queue_id,jsonb_build_object('item',item,'photos',p_photos));
+  INSERT INTO private.ech_original_photo_links(queue_id,normalized_sha256,original_id)
+   SELECT p_next_queue_id,l.normalized_sha256,l.original_id FROM private.ech_original_photo_links l
+   WHERE l.queue_id=r.queue_id AND EXISTS(SELECT 1 FROM jsonb_array_elements(p_photos) f WHERE f->>'sha256'=l.normalized_sha256);
  ELSE
   p_next_queue_id:=NULL;
  END IF;

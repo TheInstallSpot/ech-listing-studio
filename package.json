@@ -3,8 +3,14 @@
   "version": "0.24.0-rc.3",
   "private": true,
   "description": "Buildless ECH listing preparation PWA; no publication worker",
-  "engines": {"node": ">=22"},
-  "scripts": {"test": "node tests/unit.mjs && node tests/recovery-regressions.mjs", "test:browser": "node tests/dev-server.mjs"},
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node tests/unit.mjs && node tests/recovery-regressions.mjs",
+    "test:browser": "node tests/dev-server.mjs",
+    "test:originals": "node tests/server-runtime/originals.mjs && node tests/server-runtime/correction.mjs && node tests/server-core-parity.mjs"
+  },
   "dependencies": {},
   "devDependencies": {}
 }

@@ -17,7 +17,8 @@
   edit('serialNumber','PRIVATE-LOCAL-SERIAL');edit('productdesc','Operator correction preserved across reopen');edit('defects','Remote missing');
   var original=await photo();window.ECHStudio.addPhotoFiles([original]);await waitFor(function(){return window.ECHStudio.photoCount()===1;});
   await window.ECHDrafts.flush();await window.ECHCloud.flush();
-  ok(document.getElementById('cloudSaveStatus').textContent.indexOf('saved securely')!==-1,'Actual JPEG upload and draft SQL return durable cloud acknowledgment');
+  ok(document.getElementById('cloudSaveStatus').textContent.indexOf('archived securely')!==-1,'Actual JPEG/draft and full-original archive return durable cloud acknowledgment');
+  var f=new FormData();f.append('mode','draft-read');var remote=await(await fetch(window.ECH_REVIEW_ENDPOINT,{method:'POST',headers:{Authorization:'Bearer '+initial.reviewToken},body:f})).json();ok(remote.originals.length===1&&remote.originals[0].sha256===await hash(original),'Full original is archived remotely with its exact fingerprint');
   var local=await window.ECHDraftStore.read(initial._draftId);ok(await hash(local.photos[0].original)===await hash(original),'Full-resolution original persists byte-for-byte on device');
   var details={id:initial._draftId,sku:initial.sku,originalHash:await hash(original),text:window.ECHStudio.getState().pdesc};localStorage.setItem('ech-real-server-resume',JSON.stringify(details));
   ok(!window.ECHStudio.prepareReview().issues.length,'App packet is ready for exact server validation');
@@ -25,6 +26,19 @@
  }catch(e){tests.push({test:e.message,status:'FAIL'});out.textContent=JSON.stringify(tests,null,2);await record('capture');}}
  document.getElementById('runServerFlow').onclick=run;
  var phase=new URL(location.href).searchParams.get('phase');
+ if(phase==='cloud-only')(async function(){try{
+  if(!window.ECHPin.connected()){edit('paigePin','123456');document.getElementById('pinForm').requestSubmit();}
+  await waitFor(function(){return window.ECHPin.connected()&&document.getElementById('preparedSelect').options.length===3;});
+  var selector=document.getElementById('preparedSelect');selector.value='0';selector.dispatchEvent(new Event('change',{bubbles:true}));
+  await waitFor(function(){return window.ECHStudio.getState().sku==='LOCAL-E2E-SPEAKER';});await window.ECHCloud.ready();await window.ECHDrafts.ready();
+  var item=window.ECHStudio.getState(),form=new FormData();form.append('mode','draft-read');
+  var remote=await(await fetch(window.ECH_REVIEW_ENDPOINT,{method:'POST',headers:{Authorization:'Bearer '+item.reviewToken},body:form})).json();
+  var snap=window.ECHStudio.snapshotDraft();
+  ok(snap.photos.length===1&&snap.photos[0].originalAvailable===true,'Fresh browser recovers a full original rather than a resized fallback');
+  ok(await hash(snap.photos[0].original)===remote.originals[0].sha256,'Fresh browser original matches the independent cloud receipt byte-for-byte');
+  ok(snap.item.pdesc==='Operator correction preserved across reopen','Cloud-only recovery retains inspection corrections');
+  await record('cloud-only');
+ }catch(e){tests.push({test:e.message,status:'FAIL'});out.textContent=JSON.stringify(tests,null,2);await record('cloud-only');}})();
  if(phase==='resume')(async function(){try{
   await window.ECHCloud.ready();await window.ECHDrafts.ready();var expected=JSON.parse(localStorage.getItem('ech-real-server-resume')),snap=window.ECHStudio.snapshotDraft();
   ok(snap.id===expected.id&&snap.item.pdesc===expected.text,'Reopen recovers exact job and operator correction');ok(snap.photos.length===1&&await hash(snap.photos[0].original)===expected.originalHash,'Reopen restores original bytes with real server recovery');
@@ -39,6 +53,7 @@
  if(phase==='restart')(async function(){try{
   await window.ECHCloud.ready();await window.ECHDrafts.ready();var expected=JSON.parse(localStorage.getItem('ech-real-server-resume'));
   var received=await(await fetch('/__test/receipts')).json();ok(received.reviews.filter(function(r){return r.queue_id===expected.id;}).length===1,'Server restart preserves one PostgreSQL receipt');
+  ok(received.originals.length===1&&received.originals[0].actualSha256===expected.originalHash,'Real process restart preserves the full original bytes and receipt');
   ok(document.getElementById('sendToLee').disabled,'Receipt recovery after server restart blocks duplicate submission');
   await window.ECHPin.list();ok(true,'Saved authenticated session reconnects after server restart');await record('restart');
  }catch(e){tests.push({test:e.message,status:'FAIL'});out.textContent=JSON.stringify(tests,null,2);await record('restart');}})();

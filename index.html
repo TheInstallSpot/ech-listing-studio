@@ -105,7 +105,7 @@
     <input type="file" id="camIn" accept="image/*" capture="environment" hidden>
     <input type="file" id="libIn" accept="image/*" multiple hidden>
 
-    <div class="photo-summary" id="photoSummary" role="status">Add at least one exact-product photo.</div>
+    <p>New photos and their full originals save privately for Lee. Keep this page open until storage is confirmed.</p><div class="photo-summary" id="photoSummary" role="status">Add at least one exact-product photo.</div>
     <div class="shots" id="shots"></div>
     <button class="startover" id="clearPhotos" type="button" style="margin-top:16px">Remove all photos</button>
     <div class="tip"><b>Remember:</b> The first photo is the main eBay photo. Make sure it shows the exact model, color, and everything included.</div>
@@ -174,7 +174,7 @@
     <h2>Send it to Lee</h2>
     <p class="lead">The app checks everything first. Nothing is published to eBay from this button.</p>
 
-    <button class="send-review" id="sendToLee" type="button">Send to Lee for approval</button>
+    <button class="send-review" id="sendToLee" type="button">Send to Lee for approval</button><p>Sending also archives your available full original photos privately for Lee. Existing originals stay on this device.</p>
     <div class="handoff-status" id="handoffStatus" role="status">Lee will still review the condition, photos, price, quantity, and listing before it goes live.</div>
 
     <details class="manual-fallback">
@@ -202,15 +202,15 @@
   <button class="next" id="navNext" type="button">Next  →</button>
 </div></nav>
 
-<script src="builder-core.js?v=24rc4"></script>
-<script src="draft-store.js?v=24rc4"></script>
-<script src="app.js?v=24rc4"></script>
-<script src="authorization-registry.js?v=24rc4"></script>
-<script src="review-config.js?v=24rc4"></script>
-<script src="pin-access.js?v=24rc4"></script>
-<script src="agent-queue.js?v=24rc4"></script>
-<script src="cloud-draft.js?v=24rc4"></script>
-<script src="draft-local.js?v=24rc4"></script>
+<script src="builder-core.js?v=24rc5"></script>
+<script src="draft-store.js?v=24rc5"></script>
+<script src="app.js?v=24rc5"></script>
+<script src="authorization-registry.js?v=24rc5"></script>
+<script src="review-config.js?v=24rc5"></script>
+<script src="pin-access.js?v=24rc5"></script>
+<script src="agent-queue.js?v=24rc5"></script>
+<script src="cloud-draft.js?v=24rc5"></script>
+<script src="draft-local.js?v=24rc5"></script>
 <style>input::placeholder,textarea::placeholder{color:#737373;opacity:1;}</style>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js?v=22').then(function(r){return r.update();}).catch(function(){});}</script>
 </body>

@@ -136,7 +136,7 @@
       var rd = new FileReader();
       rd.onload = function(){
         var im = new Image();
-        im.onload = function(){ if(generation!==productGeneration)return;photos.push({original:file,name:file.name||('photo-'+(photos.length+1)+'.jpeg'), img:im}); drawShots(); };
+        im.onload = function(){ if(generation!==productGeneration)return;photos.push({original:file,name:file.name||('photo-'+(photos.length+1)+'.jpeg'), img:im}); drawShots();document.dispatchEvent(new Event('ech:originalAdded')); };
         im.onerror=function(){toast('This photo could not be opened. Choose the original again.');};
         im.src = rd.result;
       };
@@ -454,12 +454,12 @@
     prepareReview: prepareReview,
     photoCount: function(){ return photos.length; },
     exportPhotos: function(){return photos.map(function(f,index){var r=normalizePhoto(f);return new File([dataUrlToBlob(r.dataUrl)],photoName(index),{type:'image/jpeg'});});},
-    restoreCloud: async function(s,files,forceLocal){
+    restoreCloud: async function(s,files,forceLocal,originalFlags){
       var generation=productGeneration, current=state();
       if(s.sku!==current.sku||s.reviewToken!==current.reviewToken)throw new Error('Saved product does not match this item.');
       var restored=await Promise.all(files.map(function(file){return new Promise(function(resolve,reject){
         var url=URL.createObjectURL(file),im=new Image();
-        im.onload=function(){URL.revokeObjectURL(url);resolve({name:file.name,img:im,original:forceLocal?file:null});};
+        im.onload=function(){URL.revokeObjectURL(url);resolve({name:file.name,img:im,original:forceLocal||(originalFlags&&originalFlags[files.indexOf(file)])?file:null,originalAvailable:!!forceLocal||!!(originalFlags&&originalFlags[files.indexOf(file)])});};
         im.onerror=function(){URL.revokeObjectURL(url);reject(new Error('Cannot recover photo'));};im.src=url;
       });}));
       if(generation!==productGeneration)return;

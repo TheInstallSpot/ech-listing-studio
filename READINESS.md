@@ -1,3 +1,7 @@
+## Full-original archive release — rc5
+
+The new private archive, exact-byte recovery, owner original links and correction lineage are implemented. See ORIGINAL_ARCHIVE_RELEASE.md for current verification and release order. Deployment payloads are regenerated from current source; older receipts below are dated history. Device originals remain a backup; cloud archive and original availability are certified separately.
+
 ## Live correction release under verification — October 12
 
 Lee authorized app pushes/deployments and cancelled the interim handoff. rc4 adds clear returned-item instructions and isolated correction/recovery/resubmission coverage. Existing local originals and completed receipts are retained. Additive SQL and versioned backend services are activated before client rollout; no legacy function is replaced. Default eBay writes remain blocked and schedules are unchanged. Actual receiver/PIN/PostgreSQL correction cycle and existing34 integration +18 safety checks pass. Hosted verification remains required before claiming completion.

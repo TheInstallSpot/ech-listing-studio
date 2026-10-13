@@ -202,7 +202,7 @@
     if(issues.length){handoffMessage(issues[0],true);status(issues[0],true);return;}
     var button=this, old=button.textContent, confirmed=false;
     var submittingQueueId=window.ECHStudio.getState()._draftId;
-    button.disabled=true; button.textContent='Checking…';
+    button.disabled=true; button.textContent='Checking…';lockWork(true);$('preparedSelect').disabled=true;$('resetWork').disabled=true;
     try{
       if(window.ECHDrafts)await window.ECHDrafts.flush();
       var result=window.ECHStudio.prepareReview(); saveLocal(result.pack);
@@ -213,6 +213,7 @@
         if(window.ECHCloud){
           button.textContent='Saving photos…';
           result.photoReferences=await window.ECHCloud.flush();
+          if(window.ECHCloud.archiveOriginals)await window.ECHCloud.archiveOriginals(result.photoReferences);
           button.textContent='Sending for review…';
         }
         var accepted=await postToHub(endpoint,result);
@@ -230,7 +231,7 @@
     }catch(err){
       if(err&&err.name==='AbortError')handoffMessage('Sending was canceled. Nothing was published.',true);
       else handoffMessage((err&&err.message)||'Could not send this review. Nothing was published.',true);
-    }finally{button.disabled=confirmed;button.textContent=confirmed?'Sent to Lee ✓':old;}
+    }finally{lockWork(false);$('preparedSelect').disabled=false;$('resetWork').disabled=false;button.disabled=confirmed;button.textContent=confirmed?'Sent to Lee ✓':old;}
   });
 
   var connectedNow=acceptSetupLink();
