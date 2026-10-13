@@ -26,7 +26,7 @@ try{
   const queue=await system.rpc('ech_pin_queue_v24',{p_token:session.token,p_logout:false});assert.ok(queue.items.some(i=>i.queueId===job.id));assert.ok(queue.items.every(i=>i.payload.items.every(p=>!('unitCost' in p)&&!('targetPrice' in p))));
   const photo=new File([new Uint8Array([255,216,255,192,0,17,8,6,164,7,8,3,1,17,0,2,17,0,3,17,0,255,217])],'fixture.jpeg',{type:'image/jpeg'});
   const upload=await call(job,{mode:'photo',photo});assert.equal(upload.status,201,sku+' photo');
-  const item={...job.item,cond:'O2',quantityConfirmed:true};delete item.reviewToken;
+  const item={...job.item,cond:(sku==='INT26-AVPRO-AC-MXNET-SW10'||(brand==='KEF'&&part!=='T301C'))?'N1':'O2',quantityConfirmed:true};delete item.reviewToken;
   const saved=await call(job,{mode:'draft-save',snapshot:JSON.stringify({item,photos:[upload.body.photo]})});assert.equal(saved.status,200);const recovered=await call(job,{mode:'draft-read'});assert.equal(recovered.body.snapshot.photos.length,1);assert.equal(recovered.body.snapshot.item.sku,sku);
   const listing={schemaVersion:1,queueId:job.id,reviewStatus:'awaiting_lee_approval',item,ebayTitle:core.ebayTitle(item),descriptionHtml:core.build(item),photoManifest:[{name:'fixture.jpeg',width:1800,height:1700}],issues:[]};
   const sent=await call(job,{listing:new Blob([JSON.stringify(listing)],{type:'application/json'}),photoReferences:JSON.stringify([upload.body.photo])});
