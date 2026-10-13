@@ -14,6 +14,9 @@
   var activeLabel=document.createElement('p');activeLabel.id='activeProduct';activeLabel.setAttribute('role','status');
   activeLabel.style.cssText='position:sticky;top:0;z-index:20;background:#eef4f8;padding:14px;font-weight:700;border:2px solid #2f7a4f';
   $('preparedSelect').closest('section').after(activeLabel);
+  var correctionNote=document.createElement('p');correctionNote.id='correctionInstructions';correctionNote.setAttribute('role','status');correctionNote.hidden=true;activeLabel.after(correctionNote);
+  function showCorrection(it){correctionNote.textContent=it&&it.correctionNote?'Lee returned this item: '+it.correctionNote:'';correctionNote.hidden=!correctionNote.textContent;}
+
   function showActive(){var s=window.ECHStudio.getState();activeLabel.textContent=s.sku?'Working on: '+[s.brand,s.part].filter(Boolean).join(' ')+' — '+s.sku:'Choose a product above to begin.';}
   function lockWork(locked){document.querySelectorAll('.panel,.rail,#navNext,#navBack').forEach(function(el){el.inert=locked;});}
   document.addEventListener('ech:draftChanged',showActive);
@@ -113,7 +116,7 @@
       if(window.ECHCloud&&window.ECHStudio.photoCount())await window.ECHCloud.flush();
       activeQueueId=it._queueId||'';document.dispatchEvent(new CustomEvent('ech:loadPrepared',{detail:it}));
       if(window.ECHCloud)await window.ECHCloud.ready();
-      showActive();status('Product loaded. Check the name above, then choose its condition.');
+      showActive();showCorrection(it);status('Product loaded. Check the name above, then choose its condition.');
     }catch(e){
       var current=window.ECHStudio.getState().sku, index=items.findIndex(function(x){return x.sku===current;});
       if(index>=0)$('preparedSelect').value=String(index);
