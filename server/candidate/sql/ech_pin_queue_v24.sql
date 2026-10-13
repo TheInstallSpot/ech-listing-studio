@@ -32,9 +32,12 @@ BEGIN
     AND EXISTS(SELECT 1 FROM jsonb_array_elements(q.payload->'items') i
       WHERE i->>'sku'=q.sku AND i->>'reviewToken' ~ '^[a-f0-9]{64}$'
       AND encode(extensions.digest(i->>'reviewToken','sha256'),'hex')=t.token_hash)
-    AND upper(regexp_replace(coalesce(t.authorization_data->>'brand',''),'[^a-zA-Z0-9]','','g'))
-      NOT IN ('KEF','FOCAL','DEFINITIVETECHNOLOGY')
-    AND q.sku !~* '^(KEF|FOCAL|DEFINITIVE[ _-]*TECHNOLOGY)[-_]';
+    AND (
+      (upper(regexp_replace(coalesce(t.authorization_data->>'brand',''),'[^a-zA-Z0-9]','','g'))
+        NOT IN ('KEF','FOCAL','DEFINITIVETECHNOLOGY') AND q.sku !~* '^(KEF|FOCAL|DEFINITIVE[ _-]*TECHNOLOGY)[-_]')
+      OR (upper(regexp_replace(coalesce(t.authorization_data->>'brand',''),'[^a-zA-Z0-9]','','g'))='KEF'
+        AND private.ech_kef_intake_exception_v27(q.sku,t.authorization_data->>'part',t.authorization_data->>'fulfillment'))
+    );
 
   -- Preserve the existing private-field stripping and return contract.
   SELECT coalesce(jsonb_agg(jsonb_build_object('queueId',q.id,'recommendationId',q.recommendation_id,
@@ -47,5 +50,5 @@ BEGIN
     WHERE q.status='ready' AND public.ech_review_allowed_v24(t.token_hash)
     ORDER BY q.approved_at LIMIT 100) q;
   RETURN jsonb_build_object('items',result);
-END $function$
+END $function$;
 
