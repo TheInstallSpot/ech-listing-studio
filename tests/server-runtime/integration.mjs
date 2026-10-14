@@ -36,9 +36,10 @@ try{
  const renewed=await system.rpc(queueRpc,{p_token:session.token,p_logout:false});ok('Authorized session renews exact expired unused job without replacing token',renewed.items.some(i=>i.queueId===expired.id));
  system.failures.draft=true;const draftFailure=await call(b,'draft-save',{snapshot:JSON.stringify({item:b.item,photos:[]})});ok('SQL persistence failure does not claim draft saved',draftFailure.status===503);
  system.failures.afterCommit=true;
- const accepted=await submit(a,ref,{targetPrice:'',reviewToken:'INJECTED-TOKEN',unknownSecret:'INJECTED-SECRET'},{descriptionHtml:'<p>PRIVATE-SERIAL<script>bad()</script></p>'});ok('Lost database response resolves through durable receipt',accepted.status===200&&accepted.body.reviewId);
+ const accepted=await submit(a,ref,{targetPrice:'',reviewToken:'INJECTED-TOKEN',unknownSecret:'INJECTED-SECRET'},{descriptionHtml:'<p>PRIVATE-SERIAL<script>bad()</script></p>',commercialApproval:{receiptId:'FORGED',values:{confirmed:true}},agentPreparation:{priceIsApproved:true},publicationEvidence:{approved:true}});ok('Lost database response resolves through durable receipt',accepted.status===200&&accepted.body.reviewId);
  const rows=await system.db.query('select listing,photo_count from public.ech_listing_reviews where queue_id=$1',[a.id]);ok('Exactly one review contains complete photo count',rows.rows.length===1&&rows.rows[0].photo_count===1);
  ok('Server rebuilds public HTML without serial or injected script',!rows.rows[0].listing.descriptionHtml.includes('PRIVATE-SERIAL')&&!rows.rows[0].listing.descriptionHtml.includes('<script>'));
+ ok('Client cannot forge private research, commercial approval or publication evidence',!rows.rows[0].listing.commercialApproval&&!rows.rows[0].listing.agentPreparation&&!rows.rows[0].listing.publicationEvidence);
  ok('Private serial remains available only in review item',rows.rows[0].listing.item.serialNumber==='PRIVATE-SERIAL');
  ok('Server allowlist excludes injected credentials and unknown fields',!rows.rows[0].listing.item.reviewToken&&!rows.rows[0].listing.item.unknownSecret);
  const replay=await submit(a,ref);ok('Retry returns the same receipt without duplicate review',replay.body.reviewId===accepted.body.reviewId);

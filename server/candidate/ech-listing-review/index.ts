@@ -83,6 +83,7 @@ type ListingPacket = {
   queueId?: unknown;
   warnings?: unknown;
   originalArchive?: unknown;
+  agentPreparation?: unknown;
   schemaVersion?: unknown; reviewStatus?: unknown; preparedAt?: unknown; ebayTitle?: unknown;
   descriptionHtml?: unknown; photoManifest?: unknown; issues?: unknown; item?: Record<string, unknown>;
 };
@@ -346,6 +347,11 @@ Deno.serve(async (request) => {
   let packet: ListingPacket;
   try { packet = JSON.parse(await listingFile.text()) as ListingPacket; }
   catch { return json({ error: 'The listing JSON is not valid.' }, 400, origin); }
+  if (!packet || typeof packet !== 'object' || Array.isArray(packet)) return json({ error: 'The listing JSON must be a supported review object.' }, 422, origin);
+  // The physical client cannot supply private research or owner approval receipts.
+  // Keep only supported public packet fields; all private data comes from the server.
+  packet = Object.fromEntries(Object.entries(packet).filter(([key]) =>
+    ['queueId','schemaVersion','reviewStatus','preparedAt','ebayTitle','descriptionHtml','photoManifest','issues','item'].includes(key))) as ListingPacket;
   // PIN queues intentionally omit commercial fields. Restore ONLY a missing
   // price from the token's existing approval; never override a supplied price.
   if (packet.item && (packet.item.targetPrice === undefined || packet.item.targetPrice === null || packet.item.targetPrice === '')) {
@@ -370,6 +376,16 @@ Deno.serve(async (request) => {
   if (expected.authorization.categoryPendingLee === true && !expected.authorization.ebayCategoryId) packet.warnings.push('Exact eBay category awaits management verification. Physical preparation only; offer preparation and publication remain blocked.');
   if ((packet.photoManifest as unknown[]).length !== photoFiles.length)
     return json({ error: 'The photo manifest does not match the uploaded photos.' }, 422, origin);
+  // Private parent research is read through a service-only RPC, never the
+  // token inspection endpoint that physical clients are permitted to call.
+  try {
+    const source = await rpc('inspect_ech_correction_source_v27', { p_token_hash: tokenHash }) as
+      {sourceReviewId?: string; sourcePreparation?: Record<string, unknown>} | null;
+    if (source?.sourceReviewId && source.sourcePreparation) {
+      packet.agentPreparation = { ...source.sourcePreparation, priceIsApproved: false,
+        sourceReviewId: source.sourceReviewId };
+    }
+  } catch { return json({ error: 'The saved research could not be recovered. Your draft and photos remain saved; please retry.' }, 503, origin); }
   const reviewId = crypto.randomUUID();
   const uploaded: string[] = [];
   const metadata: Array<Record<string, unknown>> = [];

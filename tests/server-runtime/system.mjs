@@ -10,7 +10,7 @@ export const root=path.resolve(new URL('../..',import.meta.url).pathname);
 export const digest=s=>createHash('sha256').update(s).digest('hex');
 export const origin='http://127.0.0.1:'+(process.env.ECH_LOCAL_PORT||8892);
 const primary={ech_ready_products:'id',ech_listing_reviews:'id',ech_listing_review_photos:'id',ech_listing_audit_log:'id',ech_review_tokens:'queue_id',ech_photo_drafts:'queue_id',ech_pin_account:'id',ech_pin_sessions:'token_hash'};
-const rpcs=new Set(['inspect_ech_review_token','ech_review_receipt','ech_draft_state','accept_ech_listing_review','ech_pin_login','ech_pin_queue','inspect_ech_review_token_v24','ech_draft_state_v24','accept_ech_listing_review_v24','ech_pin_queue_v24','save_ech_original_photo_v25','read_ech_original_photos_v25']);
+const rpcs=new Set(['inspect_ech_correction_source_v27','inspect_ech_review_token','ech_review_receipt','ech_draft_state','accept_ech_listing_review','ech_pin_login','ech_pin_queue','inspect_ech_review_token_v24','ech_draft_state_v24','accept_ech_listing_review_v24','ech_pin_queue_v24','save_ech_original_photo_v25','read_ech_original_photos_v25']);
 export async function createSystem({directory,baseline=false}={}){
  const data=directory||await fs.mkdtemp('/private/tmp/ech-real-server-');
  await fs.mkdir(data,{recursive:true});
@@ -30,6 +30,9 @@ export async function createSystem({directory,baseline=false}={}){
  }
  await db.exec("create schema if not exists storage;create table if not exists storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);");
  await db.exec(await fs.readFile(path.join(root,'server/release/ECH_ORIGINAL_ARCHIVE.sql'),'utf8'));
+ await db.exec('create table if not exists private.ech_publish_approvers(actor_id text primary key,active boolean);');
+ await db.exec(await fs.readFile(path.join(root,'server/release/ECH_CORRECTION_LIFECYCLE.sql'),'utf8'));
+ await db.exec((await fs.readFile(path.join(root,'server/release/ECH_CORRECTION_RESEARCH_FUNCTIONS.sql'),'utf8')).replace(/DO \$guard\$[\s\S]*?END \$guard\$;/,''));
  const failures={upload:false,draft:false,afterCommit:false,sign:false};let lastReview=null;
  async function rpc(name,args){if(!rpcs.has(name))throw Error('Unsupported isolated RPC');const keys=Object.keys(args);const {rows}=await db.query(`select public.${name}(${keys.map((k,i)=>`${k} => $${i+1}`).join(',')}) as result`,keys.map(k=>args[k]));return rows[0].result;}
  function diskPath(key){if(!/^(ech-review-photos|ech-original-photos)\//.test(key))key='ech-review-photos/'+key;const target=path.resolve(data,'photos',key);if(!target.startsWith(path.resolve(data,'photos')+path.sep))throw Error('Invalid storage path');return target;}
