@@ -33,6 +33,7 @@ export async function createSystem({directory,baseline=false}={}){
  await db.exec('create table if not exists private.ech_publish_approvers(actor_id text primary key,active boolean);');
  await db.exec(await fs.readFile(path.join(root,'server/release/ECH_CORRECTION_LIFECYCLE.sql'),'utf8'));
  await db.exec((await fs.readFile(path.join(root,'server/release/ECH_CORRECTION_RESEARCH_FUNCTIONS.sql'),'utf8')).replace(/DO \$guard\$[\s\S]*?END \$guard\$;/,''));
+ await db.exec(await fs.readFile(path.join(root,'server/release/ECH_TOKEN_INSPECTION_SERVICE_ONLY.sql'),'utf8'));
  const failures={upload:false,draft:false,afterCommit:false,sign:false};let lastReview=null;
  async function rpc(name,args){if(!rpcs.has(name))throw Error('Unsupported isolated RPC');const keys=Object.keys(args);const {rows}=await db.query(`select public.${name}(${keys.map((k,i)=>`${k} => $${i+1}`).join(',')}) as result`,keys.map(k=>args[k]));return rows[0].result;}
  function diskPath(key){if(!/^(ech-review-photos|ech-original-photos)\//.test(key))key='ech-review-photos/'+key;const target=path.resolve(data,'photos',key);if(!target.startsWith(path.resolve(data,'photos')+path.sep))throw Error('Invalid storage path');return target;}
