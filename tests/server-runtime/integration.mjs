@@ -19,9 +19,11 @@ try{
  const ref=upload.body.photo;
  const wrong=await submit(b,ref);ok('Another physical job cannot attach the same-SKU photo',wrong.status===422);
  const empty=await call(a,'draft-read');ok('New job reads an empty draft successfully',empty.status===200);
- const draft=await call(a,'draft-save',{snapshot:JSON.stringify({item:{...a.item,cond:'N1',quantityConfirmed:true,pdesc:'Operator correction'},photos:[ref]})});ok('Actual SQL persists corrected draft',draft.status===200);
+ const draft=await call(a,'draft-save',{snapshot:JSON.stringify({item:{...a.item,cond:'N1',quantityConfirmed:true,pdesc:'Operator correction',packedWeightLb:'2.5',packedLengthIn:'12',packedWidthIn:'9',packedHeightIn:'4'},photos:[ref]})});ok('Actual SQL persists corrected draft',draft.status===200);
  const recovered=await call(a,'draft-read');ok('Draft read returns corrected facts and private signed photo',recovered.status===200&&recovered.body.snapshot.item.pdesc==='Operator correction'&&recovered.body.snapshot.photos[0].signedUrl);
  ok('SQL strips review token from stored draft',!recovered.body.snapshot.item.reviewToken);
+ ok('Measured packed dimensions survive actual receiver and SQL draft recovery',recovered.body.snapshot.item.packedWeightLb==='2.5'&&recovered.body.snapshot.item.packedLengthIn==='12'&&recovered.body.snapshot.item.packedWidthIn==='9'&&recovered.body.snapshot.item.packedHeightIn==='4');
+ for (const bad of ['-1','0','NaN','Infinity']) { const invalidMeasurement=await submit(a,ref,{packedWeightLb:bad});ok('Invalid packed weight '+bad+' fails before review acceptance',invalidMeasurement.status===422); }
  const tampered=await submit(a,ref,{availableQuantity:'9'});ok('Changed quantity fails exact Lee-approval comparison',tampered.status===422);
  const price=await submit(a,ref,{targetPrice:'1.00'});ok('Changed price fails exact Lee-approval comparison',price.status===422);
  const malformed=await call(a,'photo',{photo:new File(['not JPEG'],'fake.jpeg',{type:'image/jpeg'})});ok('False JPEG filename is rejected',malformed.status===422);

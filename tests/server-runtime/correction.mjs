@@ -19,15 +19,20 @@ try{
  const review=(await system.db.query('select * from public.ech_listing_reviews where id=$1',[received.body.reviewId])).rows[0];
  const id=randomUUID(),token=digest(randomUUID()),ref={...uploaded.body.photo,displayOrder:0,storagePath:`${first.sku}/drafts/${id}/${uploaded.body.photo.sha256}.jpeg`};
  const destination=system.diskPath(ref.storagePath);await fs.mkdir(new URL('.', 'file://'+destination).pathname,{recursive:true});await fs.copyFile(system.diskPath(uploaded.body.photo.storagePath),destination);
- const result=(await system.db.query('select public.decide_ech_review_v25($1,$2,$3,$4,$5,$6,$7,$8) r',[review.id,review.updated_at,'owner','return_to_paige','Check all box contents.',id,token,[ref]])).rows[0].r;
+ const result=(await system.db.query('select public.decide_ech_review_v25($1,$2,$3,$4,$5,$6,$7,$8) r',[review.id,review.updated_at,'owner','return_to_paige','Measure packed buyer-unit weight and dimensions; keep the saved photos.',id,token,[ref]])).rows[0].r;
  assert.equal(result.status,'returned_to_paige');
- const queue=await system.rpc('ech_pin_queue_v24',{p_token:session.token,p_logout:false});const correction=queue.items.find(row=>row.queueId===id);assert.ok(correction);assert.equal(correction.payload.items[0].correctionNote,'Check all box contents.');
+ const queue=await system.rpc('ech_pin_queue_v24',{p_token:session.token,p_logout:false});const correction=queue.items.find(row=>row.queueId===id);assert.ok(correction);assert.equal(correction.payload.items[0].correctionNote,'Measure packed buyer-unit weight and dimensions; keep the saved photos.');
  for(const key of ['unitCost','cost','targetPrice','researchNotes','shippingPlan'])assert.equal(key in correction.payload.items[0],false);
  const next={id,sku:first.sku,token,item:correction.payload.items[0]};
  const recovered=await call(next,'draft-read');assert.equal(recovered.status,200);assert.equal(recovered.body.snapshot.photos.length,1);assert.equal(recovered.body.snapshot.item.quantityConfirmed,false);assert.equal(recovered.body.snapshot.item.cond,'');assert.equal(recovered.body.originals[0].id,original.body.original.id);assert.equal(recovered.body.originals[0].sha256,original.body.original.sha256);
+ Object.assign(next.item,{packedWeightLb:'2.5',packedLengthIn:'12',packedWidthIn:'9',packedHeightIn:'4'});
  const submitted=await submit(next,ref);assert.equal(submitted.status,201,JSON.stringify(submitted.body));assert.notEqual(submitted.body.reviewId,review.id);
  const retry=await submit(next,ref);assert.equal(retry.body.reviewId,submitted.body.reviewId);
  const all=(await system.db.query('select id,review_status from public.ech_listing_reviews')).rows;assert.equal(all.length,2);assert.equal(all.find(r=>r.id===review.id).review_status,'returned_to_paige');assert.equal(all.find(r=>r.id===submitted.body.reviewId).review_status,'awaiting_lee_approval');
+ const measurementRow=(await system.db.query('select listing from public.ech_listing_reviews where id=$1',[submitted.body.reviewId])).rows[0];
+ for(const [key,value] of Object.entries({packedWeightLb:'2.5',packedLengthIn:'12',packedWidthIn:'9',packedHeightIn:'4'}))assert.equal(measurementRow.listing.item[key],value);
+ const oldPhotos=(await system.db.query('select count(*)::int n from public.ech_listing_review_photos where review_id=$1',[review.id])).rows[0];assert.equal(oldPhotos.n,1);
+ assert.equal((await fs.readFile(system.diskPath(uploaded.body.photo.storagePath))).length,uploaded.body.photo.sizeBytes);
  const old=await call(first,'draft-read');assert.equal(old.body.reviewId,review.id);
- console.log('PASS: actual receiving functions, PIN queue and PostgreSQL return/recover/resubmit/retry lifecycle; original receipt retained; no eBay calls.');
+ console.log('PASS: actual receiving functions, PIN queue and PostgreSQL return/recover/resubmit/retry lifecycle; original receipt/photo bytes retained; packed measurements added without another photo upload; no eBay calls.');
 }finally{await system.close();}

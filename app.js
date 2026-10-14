@@ -194,6 +194,10 @@
       ebayCategoryPath:$('#ebayCategoryPath').value.trim(),
       ebayCategoryVerifiedAt:$('#ebayCategoryVerifiedAt').value.trim(),
       targetPrice:$('#targetPrice').value.trim(), shippingPlan:$('#shippingPlan').value.trim(),
+      packedWeightLb:$('#packedWeightLb').value.trim(),
+      packedLengthIn:$('#packedLengthIn').value.trim(),
+      packedWidthIn:$('#packedWidthIn').value.trim(),
+      packedHeightIn:$('#packedHeightIn').value.trim(),
       researchNotes:$('#researchNotes').value.trim(),
       brand:$('#brand').value.trim(), part:$('#part').value.trim(),
       what:$('#what').value.trim(), sold:$('#sold').value.trim(),
@@ -261,6 +265,7 @@
 
   function reviewIssues(){
     var s=state(), issues=[];
+    ['packedWeightLb','packedLengthIn','packedWidthIn','packedHeightIn'].forEach(function(k){if(s[k] && (!Number.isFinite(Number(s[k])) || Number(s[k])<=0))issues.push('Packed measurements must be positive numbers or left blank until measured.');});
     if(window.ECHAuthorization){var authorization=window.ECHAuthorization.check(s);if(!authorization.allowed)issues.push(authorization.reason);}
     if(!s.quantityConfirmed)issues.push('Check the available quantity and included contents before sending.');
     if(!s.cond) issues.push('Choose N1, O2, or D3 from the item in front of you.');
@@ -359,6 +364,11 @@
       $('#ebayCategoryPath').value=s.ebayCategoryPath||'';
       $('#ebayCategoryVerifiedAt').value=s.ebayCategoryVerifiedAt||'';
       $('#targetPrice').value=s.targetPrice||''; $('#shippingPlan').value=s.shippingPlan||'';
+      $('#packedWeightLb').value=s.packedWeightLb||'';
+      $('#packedLengthIn').value=s.packedLengthIn||'';
+      $('#packedWidthIn').value=s.packedWidthIn||'';
+      $('#packedHeightIn').value=s.packedHeightIn||'';
+
       $('#researchNotes').value=s.researchNotes||'';
       $('#brand').value=s.brand||''; $('#part').value=s.part||''; $('#what').value=s.what||'';
       $('#sold').value=s.sold||''; $('#headline').value=s.title||''; $('#hook').value=s.hook||'';
@@ -380,7 +390,7 @@
     productGeneration++;draftId=crypto.randomUUID();hasCorrections=false;$('#quantityConfirmed').checked=false;
     try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
     photos=[]; drawShots();
-    ['serialNumber','packaging','defects','sku','productId','availableQuantity','fulfillment','reviewToken','isPassive','compatibilityNote','catalogNote','ebayCategoryId','ebayCategoryName','ebayCategoryPath','ebayCategoryVerifiedAt','targetPrice','shippingPlan','researchNotes','brand','part','what','sold','headline','hook','productdesc','mounting'].forEach(function(k){ $('#'+k).value=''; });
+    ['serialNumber','packaging','defects','sku','productId','availableQuantity','fulfillment','reviewToken','isPassive','compatibilityNote','catalogNote','ebayCategoryId','ebayCategoryName','ebayCategoryPath','ebayCategoryVerifiedAt','targetPrice','shippingPlan','packedWeightLb','packedLengthIn','packedWidthIn','packedHeightIn','researchNotes','brand','part','what','sold','headline','hook','productdesc','mounting'].forEach(function(k){ $('#'+k).value=''; });
     document.querySelectorAll('input[name=cond]').forEach(function(r){ r.checked=false; });
     ['box','spec','ver'].forEach(function(k){ $('#'+k+'Rows').innerHTML=''; });
     ['',''].forEach(function(t){ addRow('box',t); });
@@ -416,7 +426,7 @@
     s.box=(s.box||[]).filter(function(v){return !/^(Paige must|Exact package contents must)/i.test(v);});
     s.ver=(s.ver||[]).filter(function(v){return !/^(Photograph|Make a separate photo|Lay out|Keep the new box|Put (all|both)|Do not open|Use (both|the speaker)|Record any)/i.test(v);});
     if(s.pdesc)s.pdesc=s.pdesc.replace(/ The listing must describe.*$/,'');
-    ['serialNumber','packaging','defects','sku','productId','targetPrice','shippingPlan','researchNotes','brand','part','what','sold','mounting','hook'].forEach(function(k){
+    ['serialNumber','packaging','defects','sku','productId','targetPrice','shippingPlan','packedWeightLb','packedLengthIn','packedWidthIn','packedHeightIn','researchNotes','brand','part','what','sold','mounting','hook'].forEach(function(k){
       if($('#'+k)) $('#'+k).value=s[k]||'';
     });
     $('#availableQuantity').value=String(s.availableQuantity!=null?s.availableQuantity:(s.quantity!=null?s.quantity:''));

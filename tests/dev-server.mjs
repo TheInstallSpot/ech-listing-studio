@@ -16,6 +16,7 @@ const server=http.createServer(async(req,res)=>{try{
   if(mode==='fail-next'){failNext=true;result={ok:true};}
   else if(failNext&&mode==='photo'){failNext=false;res.writeHead(503,{'content-type':'application/json'});res.end(JSON.stringify({error:'Simulated upload failure'}));return;}
   else if(mode==='photo'){const file=data.get('photo'),bytes=Buffer.from(await file.arrayBuffer());const sha=createHash('sha256').update(bytes).digest('hex');photos.set(sha,bytes);result={photo:{id:sha,sha256:sha,originalName:file.name,signedUrl:'/fixture-photo/'+sha}};}
+  else if(mode==='original'){const file=data.get('photo'),bytes=Buffer.from(await file.arrayBuffer()),sha=createHash('sha256').update(bytes).digest('hex');photos.set(sha,bytes);result={original:{id:sha,sha256:sha,sizeBytes:bytes.length,originalName:file.name,mimeType:file.type,normalizedSha256:data.get('normalizedSha256'),signedUrl:'/fixture-photo/'+sha}};}
   else if(mode==='draft-save'){drafts.set(token,JSON.parse(data.get('snapshot')));result={saved:true};}
   else if(mode==='draft-read'){result={snapshot:drafts.get(token)||null};const d=result.snapshot;if(d)d.photos=d.photos.map(p=>({...p,signedUrl:'/fixture-photo/'+p.sha256}));}
   else {const file=data.get('listing');const listing=file?JSON.parse(await file.text()):null;result={reviewId:'fixture-review-'+(++count),status:'awaiting_lee_approval'};receipts.set(token,result);await writeFile(path.join(output,'mock-review-'+count+'.json'),JSON.stringify({listing,result},null,2));}

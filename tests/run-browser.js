@@ -17,6 +17,7 @@
    var confirmation=document.getElementById('quantityConfirmed');confirmation.checked=true;confirmation.dispatchEvent(new Event('change',{bubbles:true}));
    var radio=document.querySelector('input[name=cond][value="'+cases[i][0]+'"]');radio.checked=true;radio.dispatchEvent(new Event('change',{bubbles:true}));
    var packaging=document.getElementById('packaging');packaging.value=cases[i][1];packaging.dispatchEvent(new Event('input',{bubbles:true}));
+   ['packedWeightLb','packedLengthIn','packedWidthIn','packedHeightIn'].forEach(function(k,n){var field=document.getElementById(k);field.value=['2.5','12','9','4'][n];field.dispatchEvent(new Event('input',{bubbles:true}));});
    if(i===4){var defects=document.getElementById('defects');defects.value='Remote missing; cabinet scratched.';defects.dispatchEvent(new Event('input',{bubbles:true}));}
    var original=await photo();window.ECHStudio.addPhotoFiles([original]);await waitFor(function(){return window.ECHStudio.photoCount()===1;});
    await window.ECHDrafts.flush();var record=await window.ECHDraftStore.read(f._queueId);
@@ -28,6 +29,7 @@
    if(i===4)ok(pack.pack.descriptionHtml.indexOf('Remote missing')!==-1,'Missing accessories disclosed in HTML');
    if(i===5)ok(pack.pack.warnings.length===1,'Incomplete specifications explicitly flagged');
    var ref=(await window.ECHStudio.exportReferencePhotos())[0];ok(await hash(ref)!==await hash(pack.files[0]),'Case '+i+': watermark copy distinct from clean eBay output');
+   ok(pack.pack.item.packedWeightLb==='2.5'&&pack.pack.item.packedLengthIn==='12'&&pack.pack.item.packedWidthIn==='9'&&pack.pack.item.packedHeightIn==='4','Case '+i+': measured packed dimensions retained in outgoing packet');
    var condition=pack.pack.item.cond;ok(condition===cases[i][0],'Case '+i+': human condition retained');
    var correction=document.getElementById('productdesc');correction.value='Paige correction for case '+i;correction.dispatchEvent(new Event('input',{bubbles:true}));await window.ECHDrafts.flush();
    await window.ECHStudio.restoreCloud(Object.assign({},f,{cond:'N1',pdesc:'Old research text'}),[]);
@@ -43,7 +45,7 @@
    ok(quotaRecord.item.pdesc===correction.value,'Legacy text-cache quota does not suppress IndexedDB corrections');
    ok(quotaRecord.photos.length===1,'Legacy text-cache quota preserves original photo persistence');
   }finally{Storage.prototype.setItem=setItem;}
-  var form=new FormData();form.append('mode','fail-next');await fetch('/mock-review',{method:'POST',body:form,headers:{Authorization:'Bearer fixture-5'}});
+  var form=new FormData();form.append('mode','fail-next');await fetch('/mock-review',{method:'POST',body:form,headers:{Authorization:'Bearer '+window.ECHStudio.getState().reviewToken}});
   var second=await photo('#997755');window.ECHStudio.addPhotoFiles([second]);await waitFor(function(){return window.ECHStudio.photoCount()===2;});
   var failed=false;try{await window.ECHCloud.flush();}catch(e){failed=true;}ok(failed,'Simulated cloud upload failure is reported');ok(window.ECHStudio.photoCount()===2,'Failed upload preserves both photos');await window.ECHDrafts.flush();await window.ECHCloud.flush();ok(true,'Retry completes cloud fixture save');
   var writer=window.ECHDraftStore.write;window.ECHDraftStore.write=async function(){throw new Error('Simulated local quota failure');};var localFailed=false;try{await window.ECHDrafts.flush();}catch(e){localFailed=true;}ok(localFailed&&window.ECHStudio.photoCount()===2,'Local storage failure blocks advancement and preserves photos');window.ECHDraftStore.write=writer;await window.ECHDrafts.flush();
@@ -56,5 +58,5 @@
  document.getElementById('runAcceptance').onclick=run;
  if(new URL(location.href).searchParams.has('sent'))(async function(){await window.ECHCloud.ready();ok(document.getElementById('sendToLee').disabled&&document.getElementById('sendToLee').textContent.indexOf('Sent to Lee')!==-1,'Reopen recognizes prior receipt and prevents duplicate send');await fetch('/evidence',{method:'POST',body:JSON.stringify({tests:tests,mode:'local-browser/receipt-reopen'})});})();
  if(new URL(location.href).searchParams.has('resume'))(async function(){try{
-  await window.ECHDrafts.ready();var expected=JSON.parse(localStorage.getItem('ech-acceptance-resume'));var snap=window.ECHStudio.snapshotDraft();ok(snap.id===expected.id&&snap.item.pdesc===expected.text,'Reopen restores exact item and correction');ok(snap.photos.length&&await hash(snap.photos[0].original)===expected.hash,'Reopen restores byte-identical original');ok(!window.ECHStudio.prepareReview().issues.length,'Reopened item remains review-ready');document.getElementById('sendToLee').click();await waitFor(function(){return document.getElementById('handoffStatus').textContent.indexOf('Sent to Lee')!==-1;});ok(document.getElementById('handoffStatus').textContent.indexOf('Nothing was published')!==-1,'Actual send handler produces mock review receipt without publication');await fetch('/evidence',{method:'POST',body:JSON.stringify({tests:tests,mode:'local-browser/reopen/mock-review'})});}catch(e){result.textContent='FAIL '+e.message;}})();
+  await window.ECHDrafts.ready();var expected=JSON.parse(localStorage.getItem('ech-acceptance-resume'));var snap=window.ECHStudio.snapshotDraft();ok(snap.id===expected.id&&snap.item.pdesc===expected.text,'Reopen restores exact item and correction');ok(snap.photos.length&&await hash(snap.photos[0].original)===expected.hash,'Reopen restores byte-identical original');ok(!window.ECHStudio.getState().cond,'Reopen requires fresh human condition confirmation');var condition=document.querySelector('input[name=cond][value="O2"]');condition.checked=true;condition.dispatchEvent(new Event('change',{bubbles:true}));ok(!window.ECHStudio.prepareReview().issues.length,'Reopened item remains review-ready');document.getElementById('sendToLee').click();await waitFor(function(){return document.getElementById('handoffStatus').textContent.indexOf('Sent to Lee')!==-1;});ok(document.getElementById('handoffStatus').textContent.indexOf('Nothing was published')!==-1,'Actual send handler produces mock review receipt without publication');await fetch('/evidence',{method:'POST',body:JSON.stringify({tests:tests,mode:'local-browser/reopen/mock-review'})});}catch(e){result.textContent='FAIL '+e.message;}})();
 })();

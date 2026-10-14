@@ -4,3 +4,6 @@ node_modules/
 tests/runtime-evidence/
 tests/server-runtime/.runtime/
 server/memory-preservation/
+
+# Also exclude local test-runtime dependency symlinks.
+node_modules

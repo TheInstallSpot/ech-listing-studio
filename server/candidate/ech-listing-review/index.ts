@@ -10,7 +10,7 @@ const MAX_PHOTO_BYTES = 12 * 1024 * 1024;
 const MAX_PHOTOS = 24;
 const ITEM_FIELDS = new Set(['cond','quantityConfirmed','sku','productId','availableQuantity','fulfillment',
   'isPassive','compatibilityNote','catalogNote','ebayCategoryId','ebayCategoryName','ebayCategoryPath',
-  'ebayCategoryVerifiedAt','targetPrice','shippingPlan','researchNotes','brand','part','what','sold','title',
+  'ebayCategoryVerifiedAt','targetPrice','shippingPlan','packedWeightLb','packedLengthIn','packedWidthIn','packedHeightIn','researchNotes','brand','part','what','sold','title',
   'hook','pdesc','mounting','box','spec','ver','serialNumber','packaging','defects']);
 function cleanItem(item: Record<string, unknown>, draft = false) {
   return Object.fromEntries(Object.entries(item).filter(([key]) => ITEM_FIELDS.has(key) || (draft && key === '_draftId')));
@@ -105,6 +105,11 @@ function packetError(packet: ListingPacket, expected: TokenInspection) {
   }
   if (item.spec !== undefined && (!Array.isArray(item.spec) || item.spec.some(row => !Array.isArray(row) || row.length !== 2 || row.some(value => typeof value !== 'string'))))
     return 'Technical specifications must be verified name/value text.';
+  for (const key of ['packedWeightLb','packedLengthIn','packedWidthIn','packedHeightIn']) {
+    const value = item[key];
+    if (value !== undefined && value !== '' && (typeof value !== 'string' || !Number.isFinite(Number(value)) || Number(value) <= 0))
+      return 'Packed measurements must be positive measured numbers or blank.';
+  }
   if (item.quantityConfirmed !== true) return 'Confirm the physical quantity and included contents.';
   if (packet.queueId !== expected.queueId)
     return 'The review is for a different physical job.';
