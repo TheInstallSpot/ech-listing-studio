@@ -105,26 +105,42 @@
   }
 
   $('preparedSelect').addEventListener('change',function(){loadSelected();});
+  async function preserveBeforeSwitch(retiredEmpty){
+    var localError=null, cloudSaved=false;
+    // A failed device original/blob lookup must not prevent trying the
+    // independent cloud backup. Never leave without a durable confirmation.
+    if(window.ECHDrafts){try{await window.ECHDrafts.flush();}catch(e){localError=e;}}
+    if(window.ECHCloud&&!retiredEmpty){
+      await window.ECHCloud.ready();
+      if(!(window.ECHCloud.isSubmitted&&window.ECHCloud.isSubmitted())){
+        var refs=await window.ECHCloud.flush();
+        cloudSaved=Array.isArray(refs)&&refs.length===window.ECHStudio.photoCount();
+        if(!cloudSaved)throw new Error('Cloud photo confirmation is incomplete. Keep this item open and retry saving photos.');
+      }
+    }
+    if(localError&&!cloudSaved)throw new Error('Device photo storage could not save this item, and no current cloud backup was confirmed. '+(localError.message||''));
+    return !!localError;
+  }
   async function loadSelected(){
     if(switching)return;
     var it=selected();if(!it)return;var auth=authorization(it);if(!auth.allowed){status(auth.reason,true);return;}
     switching=true;lockWork(true);$('preparedSelect').disabled=true;$('loadPrepared').disabled=true;
+    var openedNext=false;
     try{
       // A freshly reconciled queue is authoritative for retired jobs. Do not
       // require an obsolete job's upload permission just to open the next job.
       // Keep the old cloud draft intact, and never skip saving visible photos.
       var current=window.ECHStudio.getState();
       var retiredEmpty=queueVerified&&current.sku&&!items.some(function(x){return x.sku===current.sku;})&&!window.ECHStudio.photoCount();
-      if(window.ECHDrafts)await window.ECHDrafts.flush();
-      if(window.ECHCloud&&!retiredEmpty)await window.ECHCloud.ready();
-      if(window.ECHCloud&&window.ECHStudio.photoCount())await window.ECHCloud.flush();
+      var savedInCloudOnly=await preserveBeforeSwitch(retiredEmpty);
       activeQueueId=it._queueId||'';document.dispatchEvent(new CustomEvent('ech:loadPrepared',{detail:it}));
+      openedNext=true;showActive();showCorrection(it);
       if(window.ECHCloud)await window.ECHCloud.ready();
-      showActive();showCorrection(it);status('Product loaded. Check the name above, then choose its condition.');
+      showActive();showCorrection(it);status(savedInCloudOnly?'Product loaded. Previous work is saved in the cloud; this device could not save its local copy.':'Product loaded. Check the name above, then choose its condition.');
     }catch(e){
       var current=window.ECHStudio.getState().sku, index=items.findIndex(function(x){return x.sku===current;});
       if(index>=0)$('preparedSelect').value=String(index);
-      status('Could not switch safely. Your current photos are still here. '+e.message,true);
+      status((openedNext?'Product opened, but saved-photo recovery needs a retry. Keep this item open; do not retake or clear its photos. ':'Could not switch safely. Your current photos are still here. ')+e.message,true);
     }finally{switching=false;lockWork(false);$('preparedSelect').disabled=false;updateSelection();}
   }
   $('loadPrepared').addEventListener('click',loadSelected);
