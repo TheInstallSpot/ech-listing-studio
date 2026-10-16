@@ -132,9 +132,11 @@
     try{
       // A freshly reconciled queue is authoritative for retired jobs. Do not
       // require an obsolete job's upload permission just to open the next job.
-      // Keep the old cloud draft intact, and never skip saving visible photos.
+      // A retired permission may no longer read the old cloud draft. Flush all
+      // visible originals into its existing local archive before leaving it.
+      // Failed local storage still blocks this path; no originals are deleted.
       var current=window.ECHStudio.getState();
-      var retiredEmpty=queueVerified&&current.sku&&!items.some(function(x){return x.sku===current.sku;})&&!window.ECHStudio.photoCount();
+      var retiredEmpty=queueVerified&&current.sku&&current._draftId&&!items.some(function(x){return (x._queueId||x.queueId||x.productId)===current._draftId;});
       var savedInCloudOnly=await preserveBeforeSwitch(retiredEmpty);
       activeQueueId=it._queueId||'';document.dispatchEvent(new CustomEvent('ech:loadPrepared',{detail:it}));
       openedNext=true;showActive();showCorrection(it);
