@@ -42,6 +42,8 @@
  if(phase==='resume')(async function(){try{
   await window.ECHCloud.ready();await window.ECHDrafts.ready();var expected=JSON.parse(localStorage.getItem('ech-real-server-resume')),snap=window.ECHStudio.snapshotDraft();
   ok(snap.id===expected.id&&snap.item.pdesc===expected.text,'Reopen recovers exact job and operator correction');ok(snap.photos.length===1&&await hash(snap.photos[0].original)===expected.originalHash,'Reopen restores original bytes with real server recovery');
+  ok(!window.ECHStudio.getState().cond,'Reopened work requires fresh human condition confirmation');
+  var renewedCondition=document.querySelector('input[name=cond][value=O2]');renewedCondition.checked=true;renewedCondition.dispatchEvent(new Event('change',{bubbles:true}));
   await fetch('/__test/control',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({afterCommit:true})});
   document.getElementById('sendToLee').click();await waitFor(function(){return document.getElementById('handoffStatus').textContent.indexOf('Sent to Lee')!==-1;});
   ok(document.getElementById('handoffStatus').textContent.indexOf('Nothing was published')!==-1,'Actual send handler completes real receiver and SQL receipt after lost commit response');

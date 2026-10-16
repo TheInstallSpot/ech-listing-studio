@@ -120,16 +120,17 @@
       <label for="packaging">Packaging</label><select id="packaging"><option value="">Not confirmed</option><option value="new_in_box">New in box</option><option value="open_box">Open box, unused</option><option value="other">Other / no original box</option></select>
       <label for="defects">Known defects or missing parts</label><textarea id="defects" placeholder="Describe exactly what you found. Leave blank only when no defects or missing parts are known."></textarea>
     </details>
-    <details id="packedMeasurements"><summary>Packed shipping measurements</summary>
+    <details id="packedMeasurements" hidden><summary>Packed shipping measurements</summary>
       <p>For buyer-paid calculated postage, measure the complete packed buyer unit. Leave blank until packed; do not estimate. You can still send the photos to Lee.</p>
       <div class="f"><label for="packedWeightLb">Packed weight (lb)</label><input id="packedWeightLb" type="number" inputmode="decimal" min="0.01" step="any"></div>
       <div class="f"><label for="packedLengthIn">Packed length (in)</label><input id="packedLengthIn" type="number" inputmode="decimal" min="0.01" step="any"></div>
       <div class="f"><label for="packedWidthIn">Packed width (in)</label><input id="packedWidthIn" type="number" inputmode="decimal" min="0.01" step="any"></div>
       <div class="f"><label for="packedHeightIn">Packed height (in)</label><input id="packedHeightIn" type="number" inputmode="decimal" min="0.01" step="any"></div>
     </details>
-    <h2>Check the item details</h2>
-    <p class="lead">Lee prepared these details. Check what is included with the item. You do not need to write sales copy or set a price.</p>
+    <h2>Anything Lee should know?</h2>
+    <p class="lead">You have chosen the condition and added the photos. Add a note above if something is missing or damaged, then continue to send it to Lee. Lee handles the research, price and shipping.</p>
 
+    <div hidden id="managementFields">
     <div class="sec">Agent research</div>
     <div class="two">
       <div class="f"><label>SKU</label><input type="text" id="sku" placeholder="KEF-CI160ER"></div>
@@ -176,6 +177,7 @@
       <div class="help">Your words, not theirs. Leave blank if you’re not sure.</div></div>
 
     <div class="banner good" id="readyBanner">Ready!</div>
+    </div>
   </section>
 
   <!-- STEP 4 : FINISH -->
@@ -211,15 +213,15 @@
   <button class="next" id="navNext" type="button">Next  →</button>
 </div></nav>
 
-<script src="builder-core.js?v=24rc11"></script>
-<script src="draft-store.js?v=24rc11"></script>
-<script src="app.js?v=24rc11"></script>
-<script src="authorization-registry.js?v=24rc11"></script>
-<script src="review-config.js?v=24rc11"></script>
-<script src="pin-access.js?v=24rc11"></script>
-<script src="agent-queue.js?v=24rc11"></script>
-<script src="cloud-draft.js?v=24rc11"></script>
-<script src="draft-local.js?v=24rc11"></script>
+<script src="builder-core.js?v=24rc12"></script>
+<script src="draft-store.js?v=24rc12"></script>
+<script src="app.js?v=24rc12"></script>
+<script src="authorization-registry.js?v=24rc12"></script>
+<script src="review-config.js?v=24rc12"></script>
+<script src="pin-access.js?v=24rc12"></script>
+<script src="agent-queue.js?v=24rc12"></script>
+<script src="cloud-draft.js?v=24rc12"></script>
+<script src="draft-local.js?v=24rc12"></script>
 <style>input::placeholder,textarea::placeholder{color:#737373;opacity:1;}</style>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js?v=22').then(function(r){return r.update();}).catch(function(){});}</script>
 </body>

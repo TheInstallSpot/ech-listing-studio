@@ -12,6 +12,7 @@
   var step = 1;
   var photos = []; // {name, img}
   var productGeneration=0;
+  var pendingPhotos=[];
   var draftId="", hasCorrections=false;
 
   function cond(){ var r = $('input[name=cond]:checked'); return r ? (r.value === "OB" ? "N1" : r.value) : ""; }
@@ -131,19 +132,21 @@
 
   function addFiles(list){
     var generation=productGeneration;
-    Array.prototype.forEach.call(list, function(file){
-      if(!/^image\//.test(file.type)) return;
-      var rd = new FileReader();
-      rd.onload = function(){
-        var im = new Image();
-        im.onload = function(){ if(generation!==productGeneration)return;photos.push({original:file,name:file.name||('photo-'+(photos.length+1)+'.jpeg'), img:im}); drawShots();document.dispatchEvent(new Event('ech:originalAdded')); };
-        im.onerror=function(){toast('This photo could not be opened. Choose the original again.');};
-        im.src = rd.result;
-      };
-      rd.onerror=function(){toast('Could not read this photo. Keep your original and try again.');};
-      rd.readAsDataURL(file);
+    Array.prototype.forEach.call(list,function(file){
+      if(!/^image\//.test(file.type))return;
+      var before=pendingPhotos.length?pendingPhotos[pendingPhotos.length-1]:Promise.resolve();
+      var pending=before.then(function(){return new Promise(function(resolve){
+        var rd=new FileReader();
+        rd.onload=function(){var im=new Image();
+          im.onload=function(){if(generation===productGeneration){photos.push({original:file,name:file.name||('photo-'+(photos.length+1)+'.jpeg'),img:im});drawShots();document.dispatchEvent(new Event('ech:originalAdded'));}resolve();};
+          im.onerror=function(){toast('This photo could not be opened. Choose the original again.');resolve();};im.src=rd.result;
+        };
+        rd.onerror=function(){toast('Could not read this photo. Keep your original and try again.');resolve();};rd.readAsDataURL(file);
+      });});
+      pendingPhotos.push(pending);pending.then(function(){pendingPhotos=pendingPhotos.filter(function(p){return p!==pending;});});
     });
   }
+  async function waitForPhotos(){while(pendingPhotos.length)await Promise.all(pendingPhotos.slice());}
   $('#camIn').addEventListener('change', function(e){ addFiles(e.target.files); e.target.value=""; });
   $('#libIn').addEventListener('change', function(e){ addFiles(e.target.files); e.target.value=""; });
   $('#takePhoto').addEventListener('click', function(){ $('#camIn').click(); });
@@ -384,8 +387,8 @@
     onChange();
   }
   async function startOver(){
-    if(window.ECHDrafts){try{await window.ECHDrafts.flush();}catch(e){toast("Keep this item open. Local originals are not saved yet.");return;}}
-    if(window.ECHCloud&&photos.length){try{await window.ECHCloud.flush();}catch(e){toast('Photos are not confirmed saved. Stay here and retry saving.');return;}}
+    await waitForPhotos();
+    try{if(window.ECHQueue)await window.ECHQueue.preserveCurrent(false);else if(window.ECHDrafts)await window.ECHDrafts.flush();}catch(e){toast('Keep this item open. Saving has not been confirmed yet.');return;}
     if(!confirm('Start a fresh item? This clears the photos and the details.')) return;
     productGeneration++;draftId=crypto.randomUUID();hasCorrections=false;$('#quantityConfirmed').checked=false;
     try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
@@ -462,6 +465,7 @@
     reviewIssues: reviewIssues,
     prepareReview: prepareReview,
     photoCount: function(){ return photos.length; },
+    waitForPhotos:waitForPhotos,
     exportPhotos: function(){return photos.map(function(f,index){var r=normalizePhoto(f);return new File([dataUrlToBlob(r.dataUrl)],photoName(index),{type:'image/jpeg'});});},
     restoreCloud: async function(s,files,forceLocal,originalFlags){
       var generation=productGeneration, current=state();

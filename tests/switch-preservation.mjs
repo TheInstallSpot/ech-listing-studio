@@ -14,7 +14,7 @@ assert.match((await run({localFail:true,cloudFail:true})).error.message,/Upload 
 assert.match((await run({localFail:true,recoveryFail:true})).error.message,/recovery needs/);
 assert.match((await run({localFail:true,refs:0})).error.message,/confirmation is incomplete/);
 assert.match((await run({localFail:true,cloud:false})).error.message,/no current cloud backup/);
-assert.match((await run({localFail:true,submitted:true})).error.message,/no current cloud backup/);
+assert.equal((await run({localFail:true,submitted:true})).result,true);
 assert.equal((await run()).result,false);
 assert.equal((await run({localFail:true,photos:0,refs:0})).result,true);
 assert.deepEqual((await run({retired:true,photos:0})).calls,['device']);

@@ -18,7 +18,9 @@
       var record=id?await store.read(id):null;
       if(window.ECHCloud)try{await window.ECHCloud.ready();}catch(e){/* Local recovery never certifies cloud success. */}
       if(g!==generation)return;
-      if(record&&record.item.sku===studio.getState().sku&&!(window.ECHCloud&&window.ECHCloud.isSubmitted())){
+      var cloud=window.ECHCloud&&window.ECHCloud.recoveredDraft&&window.ECHCloud.recoveredDraft();
+      var newerCloud=cloud&&cloud.id===id&&Date.parse(cloud.updatedAt)>Date.parse(record&&record.updatedAt||'');
+      if(record&&record.item.sku===studio.getState().sku&&!newerCloud&&!(window.ECHCloud&&window.ECHCloud.isSubmitted())){
         await studio.restoreLocalDraft(record);say('Your saved originals and changes are back.');
       }
     }catch(e){lastError=e;recoveryFailed=true;say('Could not recover local originals. Keep this page open and ask Lee.');}

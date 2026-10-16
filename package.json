@@ -7,7 +7,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node tests/unit.mjs && node tests/recovery-regressions.mjs && node tests/switch-preservation.mjs",
+    "test": "node tests/unit.mjs && node tests/recovery-regressions.mjs && node tests/switch-preservation.mjs && node tests/workflow-regressions.mjs",
     "test:browser": "node tests/dev-server.mjs",
     "test:originals": "node tests/server-runtime/originals.mjs && node tests/server-runtime/correction.mjs && node tests/server-core-parity.mjs"
   },

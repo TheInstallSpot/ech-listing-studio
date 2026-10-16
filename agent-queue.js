@@ -107,12 +107,15 @@
   $('preparedSelect').addEventListener('change',function(){loadSelected();});
   async function preserveBeforeSwitch(retiredEmpty){
     var localError=null, cloudSaved=false;
+    if(window.ECHStudio.waitForPhotos)await window.ECHStudio.waitForPhotos();
     // A failed device original/blob lookup must not prevent trying the
     // independent cloud backup. Never leave without a durable confirmation.
     if(window.ECHDrafts){try{await window.ECHDrafts.flush();}catch(e){localError=e;}}
     if(window.ECHCloud&&!retiredEmpty){
       await window.ECHCloud.ready();
-      if(!(window.ECHCloud.isSubmitted&&window.ECHCloud.isSubmitted())){
+      if(window.ECHCloud.isSubmitted&&window.ECHCloud.isSubmitted()){
+        cloudSaved=true; // A durable review receipt already owns these photos.
+      }else{
         var refs=await window.ECHCloud.flush();
         cloudSaved=Array.isArray(refs)&&refs.length===window.ECHStudio.photoCount();
         if(!cloudSaved)throw new Error('Cloud photo confirmation is incomplete. Keep this item open and retry saving photos.');
@@ -143,6 +146,7 @@
       status((openedNext?'Product opened, but saved-photo recovery needs a retry. Keep this item open; do not retake or clear its photos. ':'Could not switch safely. Your current photos are still here. ')+e.message,true);
     }finally{switching=false;lockWork(false);$('preparedSelect').disabled=false;updateSelection();}
   }
+  window.ECHQueue={preserveCurrent:preserveBeforeSwitch};
   $('loadPrepared').addEventListener('click',loadSelected);
   $('syncApprovals').addEventListener('click',function(){syncApprovals(false);});
   $('importPrepared').addEventListener('click',function(){ $('preparedFile').click(); });
@@ -171,7 +175,7 @@
     var saved=[]; try{ saved=JSON.parse(localStorage.getItem(REVIEW_KEY)||'[]'); }catch(e){}
     if(!Array.isArray(saved))saved=[];
     saved=saved.filter(function(x){return !x||!x.item||x.item.sku!==pack.item.sku;});
-    saved.push(pack); localStorage.setItem(REVIEW_KEY,JSON.stringify(saved));
+    saved.push(pack);try{localStorage.setItem(REVIEW_KEY,JSON.stringify(saved));return true;}catch(e){return false;}
   }
   function handoffMessage(message,bad){ var el=$('handoffStatus'); el.textContent=message; el.className='handoff-status'+(bad?' handoff-error':' handoff-good'); }
   async function postToHub(endpoint,result){
@@ -217,15 +221,16 @@
   }
 
   $('sendToLee').addEventListener('click',async function(){
-    if(!window.ECHStudio)return;
-    var issues=window.ECHStudio.reviewIssues();
-    if(issues.length){handoffMessage(issues[0],true);status(issues[0],true);return;}
+    if(!window.ECHStudio||this.disabled)return;
     var button=this, old=button.textContent, confirmed=false;
     var submittingQueueId=window.ECHStudio.getState()._draftId;
-    button.disabled=true; button.textContent='Checking…';lockWork(true);$('preparedSelect').disabled=true;$('resetWork').disabled=true;
+    button.disabled=true;button.textContent='Checking…';lockWork(true);$('preparedSelect').disabled=true;$('resetWork').disabled=true;
     try{
-      if(window.ECHDrafts)await window.ECHDrafts.flush();
-      var result=window.ECHStudio.prepareReview(); saveLocal(result.pack);
+      if(window.ECHStudio.waitForPhotos)await window.ECHStudio.waitForPhotos();
+      if(window.ECHStudio.getState()._draftId!==submittingQueueId)throw new Error('The active product changed. Check the product name before sending.');
+      var issues=window.ECHStudio.reviewIssues();if(issues.length)throw new Error(issues[0]);
+      await preserveBeforeSwitch(false);
+      var result=window.ECHStudio.prepareReview(), localReviewSaved=saveLocal(result.pack);
       var endpoint=String(window.ECH_REVIEW_ENDPOINT||'').trim();
       if(endpoint){
         if(!navigator.onLine)throw new Error('You are offline. The review is saved here; send it when the connection returns.');
@@ -243,6 +248,7 @@
         handoffMessage('Sent to Lee ✓ Review '+String(accepted.reviewId||'').slice(0,8)+' is waiting. Nothing was published to eBay.');
         status('Sent to Lee for approval.');
       }else{
+        if(!localReviewSaved)throw new Error('Could not save the review on this device. Keep this item open and reconnect the Hub.');
         button.textContent='Opening…';
         var shared=await shareReview(result);
         if(shared){handoffMessage('Shared for Lee’s review ✓ Nothing was published to eBay.');status('Shared for Lee’s review.');}
