@@ -174,7 +174,19 @@ function esc(s){
   function ebayTitle(s){
     var condition={N1:s.packaging==='open_box'?"New Open Box":"New",O2:"Used",D3:"Dealer Demo"}[s.cond]||"";
     var what=String(s.what||"").replace(/(\d+(?:\.\d+)?)-inch\b/gi,"$1 in");
-    return [s.brand,s.part,what,condition,s.sold,s.cond?"("+s.cond+")":""].filter(Boolean).join(" ").replace(/\s+/g," ").trim();
+    function compose(){return [s.brand,s.part,what,condition,s.sold,s.cond?"("+s.cond+")":""].filter(Boolean).join(" ").replace(/\s+/g," ").trim();}
+    // These exact prepared models have verified shorter product descriptors.
+    // Old saved drafts must also fit when Paige chooses New Open Box. Keep
+    // exact model, condition, sale unit and code; the full description is intact.
+    if(compose().length>80){
+      var shortWhat={
+        'EPISODE|ES-ESS-BRKT-IWLCR-6':'LCR Speaker Brackets',
+        'DECO TV FRAMES|FRM-SF-D5182-65-2021':'Black TV Frame',
+        'DECO TV FRAMES|FRM-SF-D5182-85-2021':'Black TV Frame'
+      }[String(s.brand||'').toUpperCase()+'|'+String(s.part||'').toUpperCase()];
+      if(shortWhat)what=shortWhat;
+    }
+    return compose();
   }
 
   function problems(s){
