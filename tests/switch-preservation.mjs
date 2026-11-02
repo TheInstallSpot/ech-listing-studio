@@ -22,4 +22,5 @@ assert.match((await run({retired:true,photos:0,localFail:true})).error.message,/
 assert.match((await run({cloudFail:true})).error.message,/Upload failed/);
 assert.deepEqual((await run({retired:true,photos:2,cloudFail:true,recoveryFail:true})).calls,['device']);
 assert.match((await run({retired:true,photos:2,localFail:true})).error.message,/no current cloud backup/);
-console.log('PASS 13 switch preservation cases: device object-not-found recovers through confirmed cloud; failed/incomplete recovery remains blocked.');
+assert.equal((await run({retired:true,submitted:true,localFail:true})).result,true);
+console.log('PASS 14 switch preservation cases: device object-not-found recovers through confirmed cloud; failed/incomplete recovery remains blocked.');

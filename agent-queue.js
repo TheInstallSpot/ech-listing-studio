@@ -109,7 +109,9 @@
 
   $('preparedSelect').addEventListener('change',function(){loadSelected();});
   async function preserveBeforeSwitch(retiredEmpty){
-    var localError=null, cloudSaved=false;
+    // A receipt for this exact current job remains durable when queue sync
+    // retires it. A stale device File must not trap an already-received job.
+    var localError=null, cloudSaved=!!(window.ECHCloud&&window.ECHCloud.isSubmitted&&window.ECHCloud.isSubmitted());
     if(window.ECHStudio.waitForPhotos)await window.ECHStudio.waitForPhotos();
     // A failed device original/blob lookup must not prevent trying the
     // independent cloud backup. Never leave without a durable confirmation.
