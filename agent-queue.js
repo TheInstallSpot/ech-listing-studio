@@ -97,6 +97,9 @@
       var added=mergeRemote(rows);
       queueVerified=true;
       status(added?added+' newly approved product'+(added===1?' is':'s are')+' ready.':'Queue is current. '+items.length+' product'+(items.length===1?'':'s')+' ready.');
+      // A successful reconnect may have renewed this item's cloud permission.
+      // Let recovery retry only after the server has accepted the queue session.
+      document.dispatchEvent(new Event('ech:queueSynced'));
     }).catch(function(err){
       queueVerified=false;
       $('queueCount').textContent='Saved list — not verified';
@@ -112,7 +115,12 @@
     // independent cloud backup. Never leave without a durable confirmation.
     if(window.ECHDrafts){try{await window.ECHDrafts.flush();}catch(e){localError=e;}}
     if(window.ECHCloud&&!retiredEmpty){
-      await window.ECHCloud.ready();
+      try{await window.ECHCloud.ready();}
+      catch(error){
+        if(!window.ECHCloud.retryRecovery)throw error;
+        // One fresh read, not a bypass: failed or incomplete storage still blocks.
+        await window.ECHCloud.retryRecovery();
+      }
       if(window.ECHCloud.isSubmitted&&window.ECHCloud.isSubmitted()){
         cloudSaved=true; // A durable review receipt already owns these photos.
       }else{

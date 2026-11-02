@@ -124,8 +124,14 @@
   document.addEventListener('ech:draftChanged',schedule);
   document.addEventListener('ech:originalAdded',function(){originalAutoConsent=window.ECHStudio.getState()._draftId;schedule();});
   document.addEventListener('ech:loadPrepared',beginRecovery);
-  window.addEventListener('online',function(){if(!recovering)saveNow().catch(function(){});});
+  document.addEventListener('ech:queueSynced',function(){
+    // The first read can fail before PIN queue renewal completes. Await that
+    // read, then retry once with the now-accepted permission. Never clear photos.
+    Promise.resolve(recoveryTask).then(function(){if(recoveryFailed&&!recovering)beginRecovery();});
+  });
+  window.addEventListener('online',function(){if(!recovering){if(recoveryFailed)beginRecovery();else saveNow().catch(function(){});}});
   window.ECHCloud={recoveredDraft:function(){return recoveredDraft;},isSubmitted:function(){return stopped;},flush:saveNow,ready:async function(){await recoveryTask;if(recoveryFailed)throw new Error('Cloud recovery needs a retry.');},
+    retryRecovery:async function(){if(recovering)await recoveryTask;else await beginRecovery();if(recoveryFailed)throw new Error('Cloud recovery could not be confirmed. Keep this item open and tap Retry saving photos.');},
     resetEmpty:function(){
       // Called only after the explicit fresh-item confirmation and cleared form.
       // Never deletes a cloud draft, and never bypasses saving in-memory photos.
