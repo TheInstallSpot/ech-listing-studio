@@ -138,7 +138,12 @@
       var pending=before.then(function(){return new Promise(function(resolve){
         var rd=new FileReader();
         rd.onload=function(){var im=new Image();
-          im.onload=function(){if(generation===productGeneration){photos.push({original:file,name:file.name||('photo-'+(photos.length+1)+'.jpeg'),img:im});drawShots();document.dispatchEvent(new Event('ech:originalAdded'));}resolve();};
+          im.onload=function(){if(generation===productGeneration){
+            // iOS picker Files can lose their external backing after the picker
+            // closes. Own the exact bytes already read, before retaining a file.
+            var ownedOriginal=new File([dataUrlToBlob(rd.result)],file.name||'photo.jpeg',{type:file.type,lastModified:file.lastModified||Date.now()});
+            photos.push({original:ownedOriginal,name:file.name||('photo-'+(photos.length+1)+'.jpeg'),img:im});drawShots();document.dispatchEvent(new Event('ech:originalAdded'));
+          }resolve();};
           im.onerror=function(){toast('This photo could not be opened. Choose the original again.');resolve();};im.src=rd.result;
         };
         rd.onerror=function(){toast('Could not read this photo. Keep your original and try again.');resolve();};rd.readAsDataURL(file);

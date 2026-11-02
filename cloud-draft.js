@@ -65,8 +65,25 @@
     for(var i=0;i<snapshot.photos.length;i++){
       var photo=snapshot.photos[i];
       if(photo.originalAvailable===false)continue; // A normalized legacy recovery is not a full original.
-      var originalSha=await hash(photo.original),ref=refs[i];
+      var ref=refs[i],originalSha;
       if(!ref||!cleanFiles[i]||await hash(cleanFiles[i])!==ref.sha256)throw new Error('Photos changed while saving. Wait for storage confirmation or retry.');
+      try{originalSha=await hash(photo.original);}
+      catch(error){
+        // A stale device File is not evidence that its archived original is
+        // missing. Read and checksum the full server-linked original first.
+        var archived=await request('draft-read',item.reviewToken,{});
+        var linked=(archived.originals||[]).find(function(o){return o.normalizedSha256===ref.sha256;});
+        if(!linked||!linked.signedUrl)throw new Error('This device cannot read the original photo, and its full cloud original is not confirmed. Keep this page open; the displayed photo has not been cleared.');
+        var controller=new AbortController(),timeout=setTimeout(function(){controller.abort();},45000);
+        try{
+          var response=await fetch(linked.signedUrl,{signal:controller.signal});
+          if(!response.ok)throw new Error('The archived original could not be opened. Keep this page open.');
+          var recovered=await response.blob();
+          if(recovered.size!==linked.sizeBytes||await hash(recovered)!==linked.sha256)throw new Error('Archived original verification failed. Keep this page open.');
+          originalCache[photoKey(item,linked.sha256)+'|'+ref.sha256]=linked;
+          saved++;continue;
+        }finally{clearTimeout(timeout);}
+      }
       var key=photoKey(item,originalSha)+'|'+ref.sha256;
       if(!originalCache[key]){
         say('Archiving original photo '+(i+1)+' of '+snapshot.photos.length+' securely…');
