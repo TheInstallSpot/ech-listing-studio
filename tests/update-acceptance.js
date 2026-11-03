@@ -15,7 +15,7 @@
   await fetch('/__test/control',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({release:'candidate'})});
   var reg=await navigator.serviceWorker.getRegistration();await reg.update();
   if(reg.installing)await new Promise(function(resolve,reject){var worker=reg.installing;worker.addEventListener('statechange',function(){if(worker.state==='activated')resolve();if(worker.state==='redundant')reject(Error('Worker install failed'));});});
-  ok((await caches.keys()).indexOf('ech-studio-local-originals-v24rc18-ready2')!==-1,'New service worker installed its complete cache');
+  ok((await caches.keys()).indexOf('ech-studio-local-originals-v24rc19-slots1')!==-1,'New service worker installed its complete cache');
   ok((await caches.keys()).indexOf('qa-unrelated-cache')!==-1,'Other app cache survives update');
   // The still-open rc17 client must continue saving before the new page opens.
   var field=document.getElementById('productdesc');field.value+=' / old tab after update';field.dispatchEvent(new Event('input',{bubbles:true}));
@@ -30,7 +30,7 @@
   ok(snap.id===expected.id&&snap.item.pdesc===expected.text,'Updated app restores exact old draft and correction');
   ok(JSON.stringify(await Promise.all(snap.photos.map(function(p){return hash(p.original);})))===JSON.stringify(expected.hashes),'Updated app retains byte-identical originals');
   ok(!snap.item.cond,'Updated app keeps condition unselected');
-  ok(Array.from(document.scripts).filter(function(s){return s.src&&s.src.indexOf('/tests/')===-1;}).every(function(s){return s.src.indexOf('24rc18-ready2')!==-1;}),'Updated HTML loads all nine scripts from the candidate release');
+  ok(Array.from(document.scripts).filter(function(s){return s.src&&s.src.indexOf('/tests/')===-1;}).every(function(s){return s.src.indexOf('24rc19-slots1')!==-1;}),'Updated HTML loads all nine scripts from the candidate release');
   await window.ECHCloud.flush();var remote=await read();ok(remote.snapshot._protocol===2,'Recovered app advances the modern revision contract');
   ok((await caches.keys()).indexOf('ech-studio-local-originals-v24rc17')!==-1,'Old shell cache retained for old open clients');
   await evidence('updated-app-recovery');

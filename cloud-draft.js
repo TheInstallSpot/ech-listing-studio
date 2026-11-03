@@ -79,7 +79,7 @@
         refs[i]=cache[key];
         // Each confirmed photo is attached immediately, even if a later upload fails.
         var clean=Object.assign({},item);delete clean.reviewToken;
-        await saveSnapshot(token,{updatedAt:savedAt,item:clean,photos:refs.filter(Boolean)});
+        await saveSnapshot(token,{updatedAt:savedAt,item:clean,photos:refs.flatMap(function(ref,index){return ref?[Object.assign({},ref,{originalName:files[index].name})]:[];})});
       }
       if(!files.length){var clean=Object.assign({},item);delete clean.reviewToken;await saveSnapshot(token,{updatedAt:savedAt,item:clean,photos:[]});}
       if(version===revision)say(files.length+' photos saved securely in the cloud ✓');
@@ -161,7 +161,7 @@
           delete ref.signedUrl;cache[photoKey(item,ref.sha256)]=ref;
         }
         if(generation!==recoveryGeneration||studio.getState().sku!==item.sku||studio.getState().reviewToken!==token)return;
-        await studio.restoreCloud(Object.assign({},draft.item,{reviewToken:token}),files,false,(result.originals||[]).length?draft.photos.map(function(ref){return (result.originals||[]).some(function(o){return o.normalizedSha256===ref.sha256;});}):[]);
+        await studio.restoreCloud(Object.assign({},draft.item,{reviewToken:token,photoSlots:draft.photos.map(function(ref){var match=String(ref.originalName||'').match(/-slot(\d+)\.jpeg$/);return match?Number(match[1]):null;})}),files,false,(result.originals||[]).length?draft.photos.map(function(ref){return (result.originals||[]).some(function(o){return o.normalizedSha256===ref.sha256;});}):[]);
         recoveredDraft={id:item._draftId,updatedAt:draft.updatedAt||'',photoCount:files.length};
         say(files.length+' photos recovered from the cloud ✓'+((result.originals||[]).length?' Full originals verified.':' Saved review photos; full originals unavailable.'));
       }else say('Photos will save to the cloud as you take them.');

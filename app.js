@@ -10,6 +10,8 @@
 
   /* ---------- shared state ---------- */
   var step = 1;
+  var slotNames = ["Full item", "Model label", "What comes with it"];
+  var captureSlot = null;
   var photos = []; // {name, img}
   var unreadableOriginals=[];
   var received=false;
@@ -24,15 +26,20 @@
   ======================================================= */
   function go(n){
     step = Math.max(1, Math.min(4, n));
+    var queueJob = Boolean($('#reviewToken').value);
+    var hasPacking = !$('#packedMeasurements').hidden;
+    if(queueJob && (step === 4 || (step === 3 && !hasPacking))) step = 2;
     $$('.panel').forEach(function(p){ p.classList.toggle('active', +p.dataset.step === step); });
     $$('.rail .st').forEach(function(s){
       var sn = +s.dataset.step;
+      s.hidden = queueJob && (sn === 4 || (sn === 3 && !hasPacking));
       s.classList.toggle('active', sn === step);
       s.classList.toggle('complete', sn < step);
     });
     var back = $('#navBack'), next = $('#navNext');
     back.disabled = step === 1;
-    next.textContent = step === 4 ? "Start next item  ↻" : (step===2?'Item notes (optional)':(step===3?'Back to photos':'Next  →'));
+    next.hidden = queueJob && step === 2 && !hasPacking;
+    next.textContent = step === 4 ? "Start next item  ↻" : (step===2?'Packed measurements':(step===3?'Back to photos':'Next: Photos'));
     var activePanel = $('.panel.active');
     if(activePanel) activePanel.scrollIntoView({block:'start', behavior:'smooth'});
   }
@@ -54,7 +61,7 @@
 
   function photoName(index){
     var sku = ($('#sku') && $('#sku').value) || ($('#part') && $('#part').value) || 'ECH-item';
-    return safeNamePiece(sku) + '-' + String(index+1).padStart(2,'0') + (index===0?'-main':'') + '.jpeg';
+    return safeNamePiece(sku) + '-' + String(index+1).padStart(2,'0') + (index===0?'-main':'') + (Number.isInteger(photos[index]?.slot)?'-slot'+photos[index].slot:'') + '.jpeg';
   }
 
   function normalizePhoto(f){ // returns a plain RGB JPEG with no added text or artwork
@@ -108,7 +115,44 @@
     received=on;$('#photoHeading').textContent=on?'Sent to Lee':'Add the photos';$('#photoIntro').hidden=on;
     ['takePhoto','choosePhoto','clearPhotos'].forEach(function(id){$('#'+id).hidden=on;});
     $('#shots').hidden=on&&!photos.length;
+    drawPhotoSlots();
     if(on){$('#handoffStatus').textContent='Lee has received this item for review. Nothing was published to eBay.';updatePhotoSummary();}
+  }
+
+  function drawPhotoSlots(){
+    var host = $('#photoSlots');
+    if(!host)return;
+    host.hidden = !$('#reviewToken').value || received;
+    if(host.hidden)return;
+    host.replaceChildren();
+    slotNames.forEach(function(label,slot){
+      var photo = photos.find(function(entry,index){return (entry.slot ?? index)===slot;});
+      var row = document.createElement('div');
+      row.className = 'photo-slot';
+      var title = document.createElement('strong');
+      title.textContent = label;
+      row.append(title);
+      if(photo){
+        var preview = document.createElement('img');
+        preview.src = normalizePhoto(photo).dataUrl;
+        preview.alt = label;
+        row.append(preview);
+      }
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = photo ? 'Retake' : 'Take photo';
+      button.setAttribute('aria-label',button.textContent+' — '+label);
+      button.onclick = function(){
+        if($('#takePhoto').disabled || pendingPhotos.length){
+          toast('Wait for photo recovery or saving to finish.');
+          return;
+        }
+        captureSlot = slot;
+        document.getElementById('camIn').click();
+      };
+      row.append(button);
+      host.append(row);
+    });
   }
 
   function drawShots(){
@@ -116,6 +160,7 @@
     var host = $('#shots');
     host.hidden=received&&!photos.length;
     updatePhotoSummary();
+    drawPhotoSlots();
     if(!photos.length){ host.innerHTML = '<div class="empty">No photos yet. Use the buttons above to take or choose photos.</div>'; return; }
     host.innerHTML = "";
     photos.forEach(function(f,index){
@@ -141,7 +186,7 @@
     });
   }
 
-  function addFiles(list){
+  function addFiles(list,slot){
     var generation=productGeneration,captureId=draftId;
     Array.prototype.forEach.call(list,function(file){
       if(!/^image\//.test(file.type))return;
@@ -156,7 +201,20 @@
           im.onload=function(){if(generation===productGeneration){
             // iOS picker Files can lose their external backing after the picker
             // closes. Own the exact bytes already read, before retaining a file.
-            photos.push({original:ownedOriginal,name:file.name||('photo-'+(photos.length+1)+'.jpeg'),img:im});drawShots();document.dispatchEvent(new Event('ech:originalAdded'));
+            var captured = {original:ownedOriginal,name:ownedOriginal.name,img:im};
+            if(Number.isInteger(slot)){
+              photos.forEach(function(entry,index){entry.slot ??= index;});
+              captured.slot = slot;
+              var old = photos.findIndex(function(entry){return entry.slot===slot;});
+              if(old===-1)photos.push(captured);else photos[old]=captured;
+              photos.sort(function(a,b){return a.slot-b.slot;});
+            }else{
+              if(photos.some(function(entry){return Number.isInteger(entry.slot);}))
+                captured.slot = Math.max(2,...photos.map(function(entry,index){return entry.slot ?? index;}))+1;
+              photos.push(captured);
+            }
+            drawShots();
+            document.dispatchEvent(new Event('ech:originalAdded'));
           }resolve();};
           im.onerror=function(){if(generation===productGeneration){unreadableOriginals.push(originalRecord);document.dispatchEvent(new Event('ech:draftChanged'));}toast('This photo could not be opened. Its original is retained; keep this page open and ask Lee.');resolve();};im.src=rd.result;
           });
@@ -167,9 +225,9 @@
     });
   }
   async function waitForPhotos(){while(pendingPhotos.length)await Promise.all(pendingPhotos.slice());}
-  $('#camIn').addEventListener('change', function(e){ addFiles(e.target.files); e.target.value=""; });
+  $('#camIn').addEventListener('change', function(e){ var slot=captureSlot; captureSlot=null; addFiles(e.target.files,slot); e.target.value=""; });
   $('#libIn').addEventListener('change', function(e){ addFiles(e.target.files); e.target.value=""; });
-  $('#takePhoto').addEventListener('click', function(){ $('#camIn').click(); });
+  $('#takePhoto').addEventListener('click', function(){ captureSlot=null; $('#camIn').click(); });
   $('#choosePhoto').addEventListener('click', function(){ $('#libIn').click(); });
   $('#clearPhotos').addEventListener('click', function(){ photos=[]; drawShots(); });
 
@@ -206,6 +264,7 @@
 
   function state(){
     return {
+      photoSlots: photos.map(function(entry){return entry.slot ?? null;}),
       cond: cond(), quantityConfirmed:$("#quantityConfirmed").checked, _draftId:draftId, serialNumber:$("#serialNumber").value.trim(), packaging:$("#packaging").value, defects:$("#defects").value.trim(),
       sku:$('#sku').value.trim(), productId:$('#productId').value.trim(),
       availableQuantity:$('#availableQuantity').value.trim(),
@@ -295,6 +354,9 @@
     CORE.problems(s).forEach(function(p){ issues.push('Finish '+(PROBLEM_WORDS[p]||p)+'.'); });
     if(CORE.ebayTitle(s).length>80) issues.push('Shorten the title to 80 characters or fewer.');
     if(!photos.length) issues.push('Add at least one exact-product photo.');
+    if(photos.some(function(entry){return Number.isInteger(entry.slot);}) &&
+       slotNames.some(function(_,slot){return !photos.some(function(entry){return entry.slot===slot;});}))
+      issues.push('Take all three labeled photos before sending.');
     if(!/^\d+$/.test(s.availableQuantity)||+s.availableQuantity<1) issues.push('Ask Lee to add the available quantity in sellable units.');
     if(!/^(distributor|ech|pickup)$/.test(s.fulfillment)) issues.push('Ask Lee to choose distributor, ECH stock, or pickup fulfillment.');
     if(/speaker/i.test([s.what,s.title].join(' '))&&!/^(true|false)$/.test(s.isPassive)) issues.push('Ask Lee to confirm whether this speaker is passive or powered.');
@@ -444,7 +506,7 @@
     var previousDraftId=draftId;
     draftId=s._draftId||s._queueId||s.queueId||s.productId||crypto.randomUUID();hasCorrections=false;
     $('#quantityConfirmed').checked=s.quantityConfirmed===true;$('#physicalQuantity').textContent='Available quantity: '+(s.availableQuantity||'not entered')+' buyer unit(s).';
-    $('#sendToLee').disabled=false;$('#sendToLee').textContent='Send to Lee for approval';
+    $('#sendToLee').disabled=false;$('#sendToLee').textContent='Send to Lee';
     $('#nextProduct').hidden=true;
     $('#handoffStatus').textContent='Lee will review this item before publication.';
     if(draftId!==previousDraftId||(s.sku&&s.sku!==$('#sku').value)){photos=[];unreadableOriginals=[];}
@@ -478,8 +540,12 @@
   }
   document.addEventListener('ech:loadPrepared', function(e){ loadPreparedItem(e.detail||{}); });
   window.ECHStudio = {
-    snapshotDraft:function(){var item=state();delete item.reviewToken;return {id:draftId,updatedAt:new Date().toISOString(),item:item,extraOriginals:unreadableOriginals.slice(),photos:photos.map(function(f,index){return {name:f.name,original:f.original||new File([dataUrlToBlob(normalizePhoto(f).dataUrl)],photoName(index),{type:"image/jpeg"}),originalAvailable:!!f.original&&f.originalAvailable!==false};})};},
-    restoreLocalDraft:async function(record){var current=state();if(record.id!==draftId||record.item.sku!==current.sku)throw new Error("Local draft belongs to another item.");var item=Object.assign({},record.item,{reviewToken:current.reviewToken,_draftId:draftId});await window.ECHStudio.restoreCloud(item,record.photos.map(function(f){return f.original;}),true);photos.forEach(function(f,i){f.originalAvailable=record.photos[i].originalAvailable;});unreadableOriginals=(record.extraOriginals||[]).slice();hasCorrections=true;drawShots();},
+    snapshotDraft:function(){var item=state();delete item.reviewToken;item.localCondition=$('input[name=cond]:checked')?.value || '';return {id:draftId,updatedAt:new Date().toISOString(),item:item,extraOriginals:unreadableOriginals.slice(),photos:photos.map(function(f,index){return {name:f.name,original:f.original||new File([dataUrlToBlob(normalizePhoto(f).dataUrl)],photoName(index),{type:"image/jpeg"}),originalAvailable:!!f.original&&f.originalAvailable!==false};})};},
+    restoreLocalDraft:async function(record){var current=state();if(record.id!==draftId||record.item.sku!==current.sku)throw new Error("Local draft belongs to another item.");var item=Object.assign({},record.item,{reviewToken:current.reviewToken,_draftId:draftId});await window.ECHStudio.restoreCloud(item,record.photos.map(function(f){return f.original;}),true);photos.forEach(function(f,i){f.originalAvailable=record.photos[i].originalAvailable;});
+      if(record.item.photoSlots?.some(Number.isInteger)){
+        $$('input[name=cond]').forEach(function(input){input.checked=input.value===record.item.localCondition;});
+        if(cond())go(2);
+      }unreadableOriginals=(record.extraOriginals||[]).slice();hasCorrections=true;drawShots();},
     getState: state,
     showReceipt:function(){receiptView(true);go(2);$('#nextProduct').hidden=false;},
     exportReferencePhotos:async function(){return Promise.all(photos.map(referenceFile));},
@@ -505,7 +571,14 @@
       if(generation!==productGeneration)return;
       if(forceLocal||!hasCorrections)loadPreparedItem(Object.assign({},s,{_draftId:draftId}));
       if(forceLocal||!hasCorrections)document.querySelectorAll('input[name=cond]').forEach(function(r){r.checked=false;});
-      if(forceLocal||!photos.length)photos=restored;onChange();drawShots();go(cond()?2:1);
+      if(forceLocal||!photos.length){
+        restored.forEach(function(photo,index){
+          var slot=s.photoSlots?.[index];
+          if(Number.isInteger(slot)&&slot>=0)photo.slot=slot;
+        });
+        photos=restored;
+      }
+      onChange();drawShots();go(cond()?2:1);
     }
   };
   go(1);

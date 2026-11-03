@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" href="favicon-32.png" sizes="32x32">
 <link rel="icon" type="image/png" href="icon-192.png" sizes="192x192">
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=24rc18-ready2">
+<link rel="stylesheet" href="styles.css?v=24rc19-slots1">
 </head>
 <body>
 <div class="wrap">
@@ -36,23 +36,24 @@
 
   <section class="agent-queue" aria-labelledby="queueTitle">
     <div class="agent-queue-head">
-      <div><span class="agent-kicker">Approved by Lee</span><h2 id="queueTitle">Paige's next product</h2></div>
+      <div><span class="agent-kicker">Approved by Lee</span><h2 id="queueTitle">My work list</h2></div>
       <span class="queue-count" id="queueCount">0 ready</span>
     </div>
-    <p class="agent-help"><b>Start here:</b> Pick the approved product below. The details are filled in for you. You only check the item, choose its condition, add the photos, and send it to Lee.</p>
-    <p class="authorization-note">If a product is not approved, the app will stop it and tell you to ask Lee.</p>
     <div class="queue-controls">
-      <select id="preparedSelect" aria-label="Prepared items"><option value="">No prepared items yet</option></select>
-      <button class="queue-load" id="loadPrepared" type="button" disabled>Start this product</button>
+      <select id="preparedSelect" aria-label="Choose a model"><option value="">No products ready</option></select>
     </div>
-    <div class="queue-actions">
-      <button class="queue-sync" id="syncApprovals" type="button">Sync approved work</button>
-      <button id="resetWork" type="button">Start a fresh item</button>
-      <button id="pinSignOut" type="button" hidden>Disconnect this device</button>
-      <button id="pinConnectButton" type="button">Connect with PIN</button>
-      <button id="importPrepared" type="button">Add products from Lee</button>
-      <button id="completePrepared" type="button" disabled>Remove from my list</button>
-    </div>
+    <button id="pinConnectButton" type="button">Connect with PIN</button>
+    <details class="queue-tools">
+      <summary>Queue and device tools</summary>
+      <div class="queue-actions">
+        <button class="queue-load" id="loadPrepared" type="button" disabled>Open selected product again</button>
+        <button class="queue-sync" id="syncApprovals" type="button">Refresh work list</button>
+        <button id="resetWork" type="button">Start a fresh item</button>
+        <button id="pinSignOut" type="button" hidden>Disconnect this device</button>
+        <button id="importPrepared" type="button">Import work from Lee</button>
+        <button id="completePrepared" type="button" disabled>Remove from this device’s list</button>
+      </div>
+    </details>
     <input id="preparedFile" type="file" accept="application/json,.json" hidden>
     <input id="availableQuantity" type="hidden">
     <input id="fulfillment" type="hidden">
@@ -76,26 +77,33 @@
 
   <!-- STEP 1 : CONDITION -->
   <section class="panel" data-step="1">
-    <h2>Pick the condition</h2>
-    <p class="lead">Choose one from the item in front of you. The app uses it in the title and listing, but never puts it on the photos.</p>
-    <p id="physicalQuantity">Available quantity needs confirmation.</p><label><input type="checkbox" id="quantityConfirmed"> I checked the available quantity and included contents.</label>
+    <h2>Check the item</h2>
+    <p class="lead">Choose the condition of the item in front of you.</p>
+    <p id="physicalQuantity">Available quantity needs confirmation.</p><label><input type="checkbox" id="quantityConfirmed"> I checked the quantity and what comes with it.</label>
     <div class="conds">
       <label class="cond n1"><input type="radio" name="cond" value="N1">
-        <span class="code">N1</span><span class="cd"><b>New and unused</b><span>Unused; verify the packaging separately.</span></span><span class="tick"></span></label>
+        <span class="cd"><b>New in box</b><span>Unused, in its original packaging.</span></span><span class="tick"></span></label>
       <label class="cond n1"><input type="radio" name="cond" value="OB">
-        <span class="code">OB</span><span class="cd"><b>Open Box / Unused</b><span>Packaging opened; the item has never been used.</span></span><span class="tick"></span></label>
+        <span class="cd"><b>Open box, unused</b><span>The box was opened. The item has never been used.</span></span><span class="tick"></span></label>
       <label class="cond o2"><input type="radio" name="cond" value="O2">
-        <span class="code">O2</span><span class="cd"><b>Used</b><span>The item has been used, not just unboxed.</span></span><span class="tick"></span></label>
+        <span class="cd"><b>Used</b><span>The item has been used.</span></span><span class="tick"></span></label>
       <label class="cond d3"><input type="radio" name="cond" value="D3">
-        <span class="code">D3</span><span class="cd"><b>Dealer demo</b><span>We used or tested it. Works, fully checked.</span></span><span class="tick"></span></label>
+        <span class="cd"><b>Dealer demo</b><span>Used as a demo and checked to work.</span></span><span class="tick"></span></label>
     </div>
+    <details><summary>Packaging, missing parts or damage</summary>
+      <label for="serialNumber">Serial number (private review only)</label><input id="serialNumber" type="text" autocomplete="off">
+      <label for="packaging">Packaging</label><select id="packaging"><option value="">Not confirmed</option><option value="new_in_box">New in box</option><option value="open_box">Open box, unused</option><option value="other">Other / no original box</option></select>
+      <label for="defects">Known defects or missing parts</label><textarea id="defects" placeholder="Describe exactly what you found. Leave blank only when no defects or missing parts are known."></textarea>
+    </details>
     <div class="warn"><b>Not sure which one?</b> Ask Lee before you go on.</div>
   </section>
 
   <!-- STEP 2 : PHOTOS -->
   <section class="panel" data-step="2">
     <h2 id="photoHeading">Add the photos</h2>
-    <p class="lead" id="photoIntro">Add clear photos in good light on a plain background. The app makes clean eBay-ready JPEGs automatically.</p>
+    <p class="lead" id="photoIntro">Start with three clear photos: the full item, the model label, and what comes with it. Add a close-up of any damage.</p>
+    <div id="photoSlots" hidden aria-label="Three listing photos"></div>
+    <details class="photo-tools"><summary>Other photo tools</summary>
     <div class="photo-btns">
       <button class="bigbtn primary" id="takePhoto" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -107,22 +115,18 @@
     <input type="file" id="camIn" accept="image/*" capture="environment" hidden>
     <input type="file" id="libIn" accept="image/*" multiple hidden>
 
-    <p>New photos and their full originals save privately for Lee. Keep this page open until storage is confirmed.</p><div class="photo-summary" id="photoSummary" role="status">Add at least one exact-product photo.</div>
     <div class="shots" id="shots"></div>
     <button class="startover" id="clearPhotos" type="button" style="margin-top:16px">Remove all photos</button>
+    </details>
+    <div class="photo-summary" id="photoSummary" role="status">Add your photos above.</div>
     <div class="tip"><b>Remember:</b> The first photo is the main eBay photo. Make sure it shows the exact model, color, and everything included.</div>
-    <button class="send-review" id="sendToLee" type="button">Send to Lee for approval</button>
-    <div class="handoff-status" id="handoffStatus" role="status">Choose the condition, add your photos, then send them to Lee. Lee handles the research, price and shipping.</div>
-    <button id="nextProduct" type="button" hidden>Choose next product</button>
+    <button class="send-review" id="sendToLee" type="button">Send to Lee</button>
+    <div class="handoff-status" id="handoffStatus" role="status">Keep this item open until you see “Sent to Lee.”</div>
+    <button id="nextProduct" type="button" hidden>Back to work list</button>
   </section>
 
   <!-- STEP 3 : DETAILS -->
   <section class="panel" data-step="3" id="panel-details">
-    <details><summary>Item checks and missing parts</summary>
-      <label for="serialNumber">Serial number (private review only)</label><input id="serialNumber" type="text" autocomplete="off">
-      <label for="packaging">Packaging</label><select id="packaging"><option value="">Not confirmed</option><option value="new_in_box">New in box</option><option value="open_box">Open box, unused</option><option value="other">Other / no original box</option></select>
-      <label for="defects">Known defects or missing parts</label><textarea id="defects" placeholder="Describe exactly what you found. Leave blank only when no defects or missing parts are known."></textarea>
-    </details>
     <details id="packedMeasurements" hidden><summary>Packed shipping measurements</summary>
       <p>For buyer-paid calculated postage, measure the complete packed buyer unit. Leave blank until packed; do not estimate. You can still send the photos to Lee.</p>
       <div class="f"><label for="packedWeightLb">Packed weight (lb)</label><input id="packedWeightLb" type="number" inputmode="decimal" min="0.01" step="any"></div>
@@ -131,7 +135,7 @@
       <div class="f"><label for="packedHeightIn">Packed height (in)</label><input id="packedHeightIn" type="number" inputmode="decimal" min="0.01" step="any"></div>
     </details>
     <h2>Anything Lee should know?</h2>
-    <p class="lead">You have chosen the condition and added the photos. Add a note above if something is missing or damaged, then continue to send it to Lee. Lee handles the research, price and shipping.</p>
+    <p class="lead">Use this screen to add packed measurements when Lee requests them.</p>
 
     <div hidden id="managementFields">
     <div class="sec">Agent research</div>
@@ -215,15 +219,15 @@
   <button class="next" id="navNext" type="button">Next  →</button>
 </div></nav>
 
-<script src="builder-core.js?v=24rc18-ready2"></script>
-<script src="draft-store.js?v=24rc18-ready2"></script>
-<script src="app.js?v=24rc18-ready2"></script>
-<script src="authorization-registry.js?v=24rc18-ready2"></script>
-<script src="review-config.js?v=24rc18-ready2"></script>
-<script src="pin-access.js?v=24rc18-ready2"></script>
-<script src="agent-queue.js?v=24rc18-ready2"></script>
-<script src="cloud-draft.js?v=24rc18-ready2"></script>
-<script src="draft-local.js?v=24rc18-ready2"></script>
+<script src="builder-core.js?v=24rc19-slots1"></script>
+<script src="draft-store.js?v=24rc19-slots1"></script>
+<script src="app.js?v=24rc19-slots1"></script>
+<script src="authorization-registry.js?v=24rc19-slots1"></script>
+<script src="review-config.js?v=24rc19-slots1"></script>
+<script src="pin-access.js?v=24rc19-slots1"></script>
+<script src="agent-queue.js?v=24rc19-slots1"></script>
+<script src="cloud-draft.js?v=24rc19-slots1"></script>
+<script src="draft-local.js?v=24rc19-slots1"></script>
 <style>input::placeholder,textarea::placeholder{color:#737373;opacity:1;}</style>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js?v=22').then(function(r){return r.update();}).catch(function(){});}</script>
 </body>

@@ -9,6 +9,44 @@
  async function photo(color){var c=document.createElement('canvas');c.width=1800;c.height=1700;var g=c.getContext('2d');g.fillStyle=color||'#557799';g.fillRect(0,0,c.width,c.height);g.fillStyle='white';g.fillRect(300,300,800,700);return new Promise(function(r){c.toBlob(function(b){r(new File([b],'fixture-original.png',{type:'image/png'}));},'image/png');});}
  async function run(){tests=[];document.getElementById('runAcceptance').disabled=true;try{
   await window.ECHDrafts.ready();
+  var slotJob=fixture('slots');
+  document.dispatchEvent(new CustomEvent('ech:loadPrepared',{detail:slotJob}));
+  await window.ECHCloud.ready();await window.ECHDrafts.ready();
+  document.getElementById('quantityConfirmed').checked=true;
+  document.querySelector('input[name=cond][value="OB"]').checked=true;
+  document.getElementById('defects').value='Fixture inspection note';
+  var capture=async function(index,color){
+   var input=document.getElementById('camIn'),open=input.click;
+   input.click=function(){};
+   try{document.querySelectorAll('#photoSlots button')[index].click();}finally{input.click=open;}
+   var transfer=new DataTransfer();transfer.items.add(await photo(color));input.files=transfer.files;
+   input.dispatchEvent(new Event('change'));
+   await window.ECHStudio.waitForPhotos();
+  };
+  await capture(2,'#008855');await capture(0,'#557799');await capture(1,'#995533');
+  var initial=await Promise.all(window.ECHStudio.snapshotDraft().photos.map(function(entry){return hash(entry.original);}));
+  var liveFetch=window.fetch;
+  try{
+   window.fetch=async function(){throw new TypeError('Simulated Wi-Fi loss');};
+   await capture(1,'#4411aa');
+   await window.ECHDrafts.flush();
+   var changed=await Promise.all(window.ECHStudio.snapshotDraft().photos.map(function(entry){return hash(entry.original);}));
+   ok(initial[0]===changed[0]&&initial[1]!==changed[1]&&initial[2]===changed[2],'Retaking the label replaces only the label');
+   window.ECHStudio.loadPrepared(fixture('other'));
+   document.dispatchEvent(new CustomEvent('ech:loadPrepared',{detail:slotJob}));
+   await window.ECHDrafts.ready();
+   var recovered=window.ECHStudio.snapshotDraft();
+   ok(recovered.item.photoSlots.join(',')==='0,1,2','Offline recovery restores exact slot order');
+   ok((await Promise.all(recovered.photos.map(function(entry){return hash(entry.original);}))).join()===changed.join(),'Offline recovery restores all three exact originals');
+   ok(recovered.item.localCondition==='OB'&&recovered.item.quantityConfirmed&&recovered.item.defects==='Fixture inspection note','Offline recovery retains condition, contents and notes');
+  }finally{window.fetch=liveFetch;}
+  await window.ECHCloud.retryRecovery();
+  document.getElementById('sendToLee').click();
+  await waitFor(function(){return document.getElementById('sendToLee').textContent.includes('Sent to Lee');});
+  var receipt=await fetch('/mock-review',{method:'POST',body:new FormData(),headers:{Authorization:'Bearer '+slotJob.reviewToken}}).then(function(response){return response.json();});
+  await window.ECHCloud.retryRecovery();
+  var replay=await fetch('/mock-review',{method:'POST',body:new FormData(),headers:{Authorization:'Bearer '+slotJob.reviewToken}}).then(function(response){return response.json();});
+  ok(receipt.reviewId&&receipt.reviewId===replay.reviewId&&document.getElementById('sendToLee').disabled,'Reconnect delivers one review and reopens the same receipt');
   var cases=[['N1','new_in_box'],['N1','open_box'],['D3','other'],['O2','other'],['O2','other'],['O2','other']];
   for(var i=0;i<cases.length;i++){
    if(i)await window.ECHDrafts.flush();var f=fixture(i);if(i===5)f.spec=[];
