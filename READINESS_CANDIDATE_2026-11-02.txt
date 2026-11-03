@@ -1,0 +1,54 @@
+PAIGE READINESS CANDIDATE 24rc18-ready2 - NOT DEPLOYED
+2026-11-02, America/Chicago. Replaces the local audit1 proposal as the current
+engineering candidate. Historical audit evidence and main8646681/24rc17 retained.
+
+Operator flow
+Select queued product -> choose physical condition -> take photos -> Send to Lee
+on Photos -> confirmed receipt -> Choose next product. Notes are optional; pricing,
+research, commercial decisions and publication stay with Lee. Recovered receipts
+show the next-product action without asking for another condition selection.
+
+Repairs
+- Exact capture bytes are owned and archived before decode. Failed decode retains
+  raw originals; aborted readers resolve rather than hanging the photo queue.
+- Full originals required and checked by size/SHA/readback before receipt.
+- Revision compare-and-set, immutable saved draft history, exact mutation replay
+  and automatic lost-acknowledgement recovery preserve work without duplicate sends.
+- Legacy rc17 clients may keep saving before a modern client takes over the job;
+  out-of-order saves or an old tab writing after modern takeover fail safely.
+- Safe app update confirms a device snapshot/originals independently of cloud save.
+- Service worker retains prior and unrelated app caches; signed cross-origin URLs
+  are not added to shell storage. Prior cache supports offline versioned assets.
+- Prepared title variants checked before capture; boot recovery accepts newer facts.
+
+Verification
+11 source/VM suites; independent deployed-source/current-SQL contract scenarios;
+7 SQL upgrade/history cases;6upload boundary cases (24photos,32MiB raw original,
+lost object reply,corrupt/missing readback,stable ordering,one receipt);43 receiver
+regressions;15 archive cases;correction lifecycle and pending-commercial gates.
+Real local Chrome + candidate receiver + PostgreSQL/Storage bridge verifies normal
+PIN/queue,capture,reload,lost final commit reply,next same-SKU isolation,true backend
+process restart. A real local service worker upgrades exactrc17 with an existing
+draft;raw originals,exactfacts,oldclient saves and other caches survive.
+Synthetic padded files test archive bytes/limits, NOT actual camera/HEIC decoding.
+
+Release scope for coordination
+1. Recheck current main/Pages/backend function fingerprints and preserve rollback.
+2. Convert/review server/audit-proposals/draft-revision.sql (new immutable private
+   history table + replacement draft RPC) and require-originals.sql (acceptance
+   gate), preserving existing service/owner auth,ACLs and all Nov2 receipt repairs.
+3. Update only ech-listing-review-v24 with candidate source and exact shared core.
+4. Publish exact candidate frontend,verifyallservedhashes,then hosted nonpublishable
+   QA receiving/retry/recovery/correction tests; no merchandise tokens or eBay writes.
+5. Lee tests actual iPhone/Safari/PWA tomorrowNov3 before Paige starts any item.
+   No clearing storage,reinstalling,credential/schedule changes or original deletes.
+
+Remaining gates
+Not pushed/deployed. Hosted positive QA and actual phone/PWA acceptance are pending.
+Real hosted maximum-size latency/edge deadlines and phone background/restart remain
+unverified. Legacy normalized-only jobs require individually reviewed private
+legacyOriginalsUnavailable authorization; none were granted. Concurrent incompatible
+facts still require Lee reconciliation; neither side may silently erase the other.
+Authoritative Hub form wording/buyerPostage repair remains with Mini source owner;
+business-process findings/negative economics remain with the independent process chat.
+No production-ready or Paige-ready certification before those gates pass.

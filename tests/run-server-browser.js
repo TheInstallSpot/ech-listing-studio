@@ -25,6 +25,8 @@
   await record('capture');out.textContent+='\nReady for reopen verification.';
  }catch(e){tests.push({test:e.message,status:'FAIL'});out.textContent=JSON.stringify(tests,null,2);await record('capture');}}
  document.getElementById('runServerFlow').onclick=run;
+ var restartButton=document.getElementById('restartFixture');
+ if(restartButton)restartButton.onclick=async function(){try{var r=await fetch('/__test/control',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({restart:true})});if(!r.ok)throw Error('Fixture restart failed');location.assign('/?phase=restart');}catch(e){out.textContent='FAIL '+e.message;}};
  var phase=new URL(location.href).searchParams.get('phase');
  if(phase==='cloud-only')(async function(){try{
   if(!window.ECHPin.connected()){edit('paigePin','123456');document.getElementById('pinForm').requestSubmit();}
@@ -44,9 +46,11 @@
   ok(snap.id===expected.id&&snap.item.pdesc===expected.text,'Reopen recovers exact job and operator correction');ok(snap.photos.length===1&&await hash(snap.photos[0].original)===expected.originalHash,'Reopen restores original bytes with real server recovery');
   ok(!window.ECHStudio.getState().cond,'Reopened work requires fresh human condition confirmation');
   var renewedCondition=document.querySelector('input[name=cond][value=O2]');renewedCondition.checked=true;renewedCondition.dispatchEvent(new Event('change',{bubbles:true}));
+  document.getElementById('navNext').click();ok(document.getElementById('sendToLee').closest('.panel').dataset.step==='2','Paige can send directly from Photos without research or shipping forms');
   await fetch('/__test/control',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({afterCommit:true})});
   document.getElementById('sendToLee').click();await waitFor(function(){return document.getElementById('handoffStatus').textContent.indexOf('Sent to Lee')!==-1;});
   ok(document.getElementById('handoffStatus').textContent.indexOf('Nothing was published')!==-1,'Actual send handler completes real receiver and SQL receipt after lost commit response');
+  ok(!document.getElementById('nextProduct').hidden,'Confirmed receipt offers Choose next product');
   var received=await(await fetch('/__test/receipts')).json(),r=received.reviews.find(function(r){return r.queue_id===expected.id;});
   ok(r&&r.photo_count===1&&r.review_status==='awaiting_lee_approval','Independent database read confirms receipt and complete photo count');ok(!r.listing_id&&!r.published_at,'Operator submission cannot publish eBay listing');ok(!r.listing.descriptionHtml.includes('PRIVATE-LOCAL-SERIAL')&&r.listing.item.serialRecorded,'Private serial is retained for review and absent from public HTML');
   document.getElementById('syncApprovals').click();await waitFor(function(){return document.getElementById('preparedSelect').options.length===2;});ok(true,'Completed job leaves actual server queue and same-SKU sibling remains');
@@ -57,6 +61,7 @@
   var received=await(await fetch('/__test/receipts')).json();ok(received.reviews.filter(function(r){return r.queue_id===expected.id;}).length===1,'Server restart preserves one PostgreSQL receipt');
   ok(received.originals.length===1&&received.originals[0].actualSha256===expected.originalHash,'Real process restart preserves the full original bytes and receipt');
   ok(document.getElementById('sendToLee').disabled,'Receipt recovery after server restart blocks duplicate submission');
+  ok(!document.getElementById('nextProduct').hidden,'Receipt recovery restores the next-product action');
   await window.ECHPin.list();ok(true,'Saved authenticated session reconnects after server restart');await record('restart');
  }catch(e){tests.push({test:e.message,status:'FAIL'});out.textContent=JSON.stringify(tests,null,2);await record('restart');}})();
  if(phase==='next')(async function(){try{

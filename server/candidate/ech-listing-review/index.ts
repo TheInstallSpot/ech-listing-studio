@@ -316,7 +316,11 @@ Deno.serve(async (request) => {
       }
       const originals = mode === 'draft-read' ? await Promise.all((await originalsFor(expected.queueId)).map(signedOriginal)) : undefined;
       return json({ snapshot, originals, saved: true }, 200, origin);
-    } catch { return json({ error: 'Cloud draft not confirmed. Keep this page open and retry.' }, 503, origin); }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('draft revision conflict'))
+        return json({ error: 'Newer cloud work exists. Your photos remain on this device. Ask Lee to reconcile the saved versions before retrying.', code: 'draft_revision_conflict' }, 409, origin);
+      return json({ error: 'Cloud draft not confirmed. Keep this page open and retry.' }, 503, origin);
+    }
   }
   const listingFile = form.get('listing');
   const photoFiles = form.getAll('photos');
@@ -409,8 +413,27 @@ Deno.serve(async (request) => {
     }
     const originals = await originalsFor(expected.queueId);
     const covered = metadata.filter(photo => originals.some(original => original.normalizedSha256 === photo.sha256)).length;
+    // A durable link is not proof that Storage still serves the original.
+    // Confirm exact original bytes before consuming the one-use permission.
+    const checkedOriginals = new Set<string>();
+    for (const photo of metadata) {
+      const original = originals.find(entry => entry.normalizedSha256 === photo.sha256);
+      if (!original || checkedOriginals.has(String(original.id))) continue;
+      const response = await fetch(`${SUPABASE_URL}/storage/v1/object/authenticated/${ORIGINAL_BUCKET}/${original.storagePath}`, {
+        headers: { apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}` }, signal: AbortSignal.timeout(45000),
+      });
+      if (!response.ok) throw new Error('A full original could not be verified. Keep this item open and retry.');
+      const bytes = await response.arrayBuffer();
+      if (bytes.byteLength !== original.sizeBytes || await sha256(bytes) !== original.sha256)
+        throw new Error('Full original verification failed. Keep this item open and ask Lee.');
+      checkedOriginals.add(String(original.id));
+    }
     packet.originalArchive = { fullOriginals: originals.length, coveredReviewPhotos: covered, reviewPhotos: metadata.length };
-    if (covered < metadata.length) packet.warnings = [...(packet.warnings as string[]), 'Full originals are unavailable for some legacy photos; normalized review photos are retained.'];
+    if (covered < metadata.length) {
+      if ((expected.authorization as Record<string, unknown>).legacyOriginalsUnavailable !== true)
+        throw new Error('Full original photos are not confirmed. Keep this item open and retry saving originals.');
+      packet.warnings = [...(packet.warnings as string[]), 'Full originals are unavailable for explicitly authorized legacy photos; normalized review photos are retained.'];
+    }
     console.info('review-stage: saving-review');
     acceptanceStarted = true;
     const accepted = await rpc('accept_ech_listing_review_v24', {

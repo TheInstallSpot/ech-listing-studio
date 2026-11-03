@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" href="favicon-32.png" sizes="32x32">
 <link rel="icon" type="image/png" href="icon-192.png" sizes="192x192">
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=24rc18-ready2">
 </head>
 <body>
 <div class="wrap">
@@ -94,8 +94,8 @@
 
   <!-- STEP 2 : PHOTOS -->
   <section class="panel" data-step="2">
-    <h2>Add the photos</h2>
-    <p class="lead">Add clear photos in good light on a plain background. The app makes clean eBay-ready JPEGs automatically.</p>
+    <h2 id="photoHeading">Add the photos</h2>
+    <p class="lead" id="photoIntro">Add clear photos in good light on a plain background. The app makes clean eBay-ready JPEGs automatically.</p>
     <div class="photo-btns">
       <button class="bigbtn primary" id="takePhoto" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -111,6 +111,9 @@
     <div class="shots" id="shots"></div>
     <button class="startover" id="clearPhotos" type="button" style="margin-top:16px">Remove all photos</button>
     <div class="tip"><b>Remember:</b> The first photo is the main eBay photo. Make sure it shows the exact model, color, and everything included.</div>
+    <button class="send-review" id="sendToLee" type="button">Send to Lee for approval</button>
+    <div class="handoff-status" id="handoffStatus" role="status">Choose the condition, add your photos, then send them to Lee. Lee handles the research, price and shipping.</div>
+    <button id="nextProduct" type="button" hidden>Choose next product</button>
   </section>
 
   <!-- STEP 3 : DETAILS -->
@@ -185,8 +188,7 @@
     <h2>Send it to Lee</h2>
     <p class="lead">The app checks everything first. Nothing is published to eBay from this button.</p>
 
-    <button class="send-review" id="sendToLee" type="button">Send to Lee for approval</button><p>Sending also archives your available full original photos privately for Lee. Existing originals stay on this device.</p>
-    <div class="handoff-status" id="handoffStatus" role="status">Lee will still review the condition, photos, price, quantity, and listing before it goes live.</div>
+    <p>Send your photos from the Photos step. Lee reviews the condition, photos, price, quantity and listing before it goes live.</p>
 
     <details class="manual-fallback">
       <summary>Manual eBay tools — only if Lee asks</summary>
@@ -213,15 +215,15 @@
   <button class="next" id="navNext" type="button">Next  →</button>
 </div></nav>
 
-<script src="builder-core.js?v=24rc17"></script>
-<script src="draft-store.js?v=24rc17"></script>
-<script src="app.js?v=24rc17"></script>
-<script src="authorization-registry.js?v=24rc17"></script>
-<script src="review-config.js?v=24rc17"></script>
-<script src="pin-access.js?v=24rc17"></script>
-<script src="agent-queue.js?v=24rc17"></script>
-<script src="cloud-draft.js?v=24rc17"></script>
-<script src="draft-local.js?v=24rc17"></script>
+<script src="builder-core.js?v=24rc18-ready2"></script>
+<script src="draft-store.js?v=24rc18-ready2"></script>
+<script src="app.js?v=24rc18-ready2"></script>
+<script src="authorization-registry.js?v=24rc18-ready2"></script>
+<script src="review-config.js?v=24rc18-ready2"></script>
+<script src="pin-access.js?v=24rc18-ready2"></script>
+<script src="agent-queue.js?v=24rc18-ready2"></script>
+<script src="cloud-draft.js?v=24rc18-ready2"></script>
+<script src="draft-local.js?v=24rc18-ready2"></script>
 <style>input::placeholder,textarea::placeholder{color:#737373;opacity:1;}</style>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js?v=22').then(function(r){return r.update();}).catch(function(){});}</script>
 </body>

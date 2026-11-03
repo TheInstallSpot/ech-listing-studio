@@ -5,7 +5,7 @@ const source=fs.readFileSync(new URL('../agent-queue.js',import.meta.url),'utf8'
 const body=source.slice(source.indexOf('  async function preserveBeforeSwitch('),source.indexOf('  async function loadSelected('));
 async function run({localFail=false,cloudFail=false,recoveryFail=false,photos=1,refs=photos,submitted=false,retired=false,cloud=true}={}){
   const calls=[];
-  const context={window:{ECHStudio:{photoCount:()=>photos},ECHDrafts:{flush:async()=>{calls.push('device');if(localFail)throw new Error('The object can not be found here.');}},ECHCloud:cloud?{ready:async()=>{calls.push('recover');if(recoveryFail)throw new Error('Cloud recovery needs a retry.');},isSubmitted:()=>submitted,flush:async()=>{calls.push('cloud-save');if(cloudFail)throw new Error('Upload failed');return Array(refs).fill({confirmed:true});}}:null}};
+  const context={window:{ECHStudio:{photoCount:()=>photos,snapshotDraft:()=>({photos:Array(photos).fill({originalAvailable:true})})},ECHDrafts:{flush:async()=>{calls.push('device');if(localFail)throw new Error('The object can not be found here.');}},ECHCloud:cloud?{ready:async()=>{calls.push('recover');if(recoveryFail)throw new Error('Cloud recovery needs a retry.');},archiveOriginals:async()=>photos,isSubmitted:()=>submitted,flush:async()=>{calls.push('cloud-save');if(cloudFail)throw new Error('Upload failed');return Array(refs).fill({confirmed:true});}}:null}};
   vm.createContext(context);vm.runInContext(body,context);
   try{return {result:await context.preserveBeforeSwitch(retired),calls};}catch(error){return {error,calls};}
 }

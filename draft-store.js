@@ -16,11 +16,17 @@
   async function write(record){
     if(!record||!record.id||!record.item||!Array.isArray(record.photos))throw new Error('Invalid local draft.');
     var safe=Object.assign({},record,{item:Object.assign({},record.item)});delete safe.item.reviewToken;
-    var originals=await Promise.all(safe.photos.map(async function(photo){var bytes=await photo.original.arrayBuffer(),digest=await root.crypto.subtle.digest('SHA-256',bytes),sha=Array.from(new Uint8Array(digest)).map(function(n){return n.toString(16).padStart(2,'0');}).join('');return {id:safe.id+':'+sha,itemId:safe.id,sha256:sha,name:photo.name,original:photo.original,originalAvailable:photo.originalAvailable};}));
+    var originals=await Promise.all(safe.photos.concat(safe.extraOriginals||[]).map(async function(photo){return originalRecord(safe.id,photo);}));
     var db=await open();return new Promise(function(resolve,reject){
       var tx=db.transaction(['drafts','originals'],'readwrite');tx.objectStore('drafts').put(safe);originals.forEach(function(photo){tx.objectStore('originals').put(photo);});
       tx.oncomplete=function(){resolve(safe.id);};tx.onerror=tx.onabort=function(){reject(tx.error||new Error('Photos not confirmed saved locally.'));};
     });
+  }
+  async function originalRecord(id,photo){var bytes=await photo.original.arrayBuffer(),digest=await root.crypto.subtle.digest('SHA-256',bytes),sha=Array.from(new Uint8Array(digest)).map(function(n){return n.toString(16).padStart(2,'0');}).join('');return {id:id+':'+sha,itemId:id,sha256:sha,name:photo.name,original:photo.original,originalAvailable:photo.originalAvailable};}
+  async function archiveOriginal(id,photo){
+    if(!id||!photo||!photo.original)throw new Error('Original identity is missing.');
+    var record=await originalRecord(id,photo),db=await open();
+    return new Promise(function(resolve,reject){var tx=db.transaction('originals','readwrite');tx.objectStore('originals').put(record);tx.oncomplete=function(){resolve(record.sha256);};tx.onerror=tx.onabort=function(){reject(tx.error||new Error('Original not saved on this device.'));};});
   }
   async function read(id){var db=await open();return new Promise(function(resolve,reject){
     var tx=db.transaction('drafts','readonly'),req=tx.objectStore('drafts').get(id);
@@ -28,5 +34,5 @@
   });}
   async function count(){var db=await open();return new Promise(function(resolve,reject){var q=db.transaction('drafts','readonly').objectStore('drafts').count();q.onsuccess=function(){resolve(q.result);};q.onerror=function(){reject(q.error);};});}
   async function readOriginals(id){var db=await open();return new Promise(function(resolve,reject){var q=db.transaction('originals','readonly').objectStore('originals').getAll();q.onsuccess=function(){resolve(q.result.filter(function(p){return p.itemId===id;}));};q.onerror=function(){reject(q.error);};});}
-  root.ECHDraftStore={write:write,read:read,count:count,readOriginals:readOriginals};
+  root.ECHDraftStore={write:write,read:read,count:count,readOriginals:readOriginals,archiveOriginal:archiveOriginal};
 })(window);

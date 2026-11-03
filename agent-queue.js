@@ -12,6 +12,7 @@
   var queueVerified=false;
   var activeQueueId='';
   var switching=false;
+  var appVersion=document.createElement('small');appVersion.id='appVersion';appVersion.textContent='App version '+APP_RELEASE;$('queueStatus').after(appVersion);
   var activeLabel=document.createElement('p');activeLabel.id='activeProduct';activeLabel.setAttribute('role','status');
   activeLabel.style.cssText='position:sticky;top:0;z-index:20;background:#eef4f8;padding:14px;font-weight:700;border:2px solid #2f7a4f';
   $('preparedSelect').closest('section').after(activeLabel);
@@ -22,7 +23,15 @@
   function lockWork(locked){document.querySelectorAll('.panel,.rail,#navNext,#navBack').forEach(function(el){el.inert=locked;});}
   document.addEventListener('ech:draftChanged',showActive);
 
-  function authorization(it){ return window.ECHAuthorization?window.ECHAuthorization.check(it):{allowed:true,restricted:false,reason:''}; }
+  function authorization(it){
+    var result=window.ECHAuthorization?window.ECHAuthorization.check(it):{allowed:true,restricted:false,reason:''};
+    if(result.allowed&&window.ECHCore){
+      var variants=[['N1','new_in_box'],['N1','open_box'],['O2','other'],['D3','other']];
+      if(variants.some(function(v){return window.ECHCore.ebayTitle(Object.assign({},it,{cond:v[0],packaging:v[1]})).length>80;}))
+        return {allowed:false,restricted:true,reason:'Lee needs to shorten the prepared title before photos. Your current work is preserved.'};
+    }
+    return result;
+  }
   function read(){ try{ items=JSON.parse(localStorage.getItem(KEY)||'[]'); }catch(e){ items=[]; } if(!Array.isArray(items)) items=[]; }
   function write(){ localStorage.setItem(KEY,JSON.stringify(items)); render(); }
   function status(s,bad){ $('queueStatus').textContent=s||''; $('queueStatus').style.color=bad?'#B03A3A':'#2F7A4F'; }
@@ -82,7 +91,18 @@
     write();
     return added;
   }
-  function checkAppUpdate(){return fetch('release.json',{cache:'no-store'}).then(function(r){if(!r.ok)throw Error('Update check unavailable');return r.json();}).then(function(meta){if(meta.release!==APP_RELEASE && /^[a-zA-Z0-9.-]+$/.test(meta.release||'')){var n=$('appUpdateNotice');if(!n){n=document.createElement('p');n.id='appUpdateNotice';$('queueStatus').after(n);}n.textContent='An app update is available. Finish and send your current item, then ';var a=document.createElement('a');a.textContent='open the updated app';a.target='_blank';a.rel='noopener';a.href=location.pathname+'?release='+encodeURIComponent(meta.release);n.appendChild(a);}}).catch(function(){});}
+  async function updateSafely(release,button){
+    button.disabled=true;button.textContent='Saving your work…';
+    try{
+      if(window.ECHStudio.waitForPhotos)await window.ECHStudio.waitForPhotos();
+      // An update may be needed precisely because cloud saving is broken.
+      // A confirmed local snapshot with its originals is an independent path.
+      try{if(!window.ECHDrafts)throw Error('Local draft storage unavailable');await window.ECHDrafts.flush();}
+      catch(localError){await preserveBeforeSwitch(false);}
+      location.assign(location.pathname+'?release='+encodeURIComponent(release));
+    }catch(error){status('Your work is still here. The update could not confirm a saved copy. Keep this page open and retry saving.',true);button.disabled=false;button.textContent='Update app safely';}
+  }
+  function checkAppUpdate(){return fetch('release.json',{cache:'no-store'}).then(function(r){if(!r.ok)throw Error('Update check unavailable');return r.json();}).then(function(meta){if(meta.release!==APP_RELEASE && /^[a-zA-Z0-9.-]+$/.test(meta.release||'')){var n=$('appUpdateNotice');if(!n){n=document.createElement('p');n.id='appUpdateNotice';$('queueStatus').after(n);}n.textContent='An app update is available. ';var a=document.createElement('button');a.type='button';a.textContent='Update app safely';a.onclick=function(){updateSafely(meta.release,a);};n.appendChild(a);}}).catch(function(){});}
   checkAppUpdate();
   function syncApprovals(quiet){
     checkAppUpdate();
@@ -116,6 +136,7 @@
     // A failed device original/blob lookup must not prevent trying the
     // independent cloud backup. Never leave without a durable confirmation.
     if(window.ECHDrafts){try{await window.ECHDrafts.flush();}catch(e){localError=e;}}
+    if(localError&&window.ECHStudio.unreadablePhotoCount&&window.ECHStudio.unreadablePhotoCount())throw new Error('An unreadable original is not confirmed saved on this device. Keep this item open and ask Lee.');
     if(window.ECHCloud&&!retiredEmpty){
       try{await window.ECHCloud.ready();}
       catch(error){
@@ -129,6 +150,14 @@
         var refs=await window.ECHCloud.flush();
         cloudSaved=Array.isArray(refs)&&refs.length===window.ECHStudio.photoCount();
         if(!cloudSaved)throw new Error('Cloud photo confirmation is incomplete. Keep this item open and retry saving photos.');
+        if(localError&&window.ECHStudio.photoCount()){
+          // Normalized JPEG acknowledgements alone cannot replace failed local
+          // storage of full originals. Verify their archive before leaving.
+          if(!window.ECHCloud.archiveOriginals)throw new Error('Full original storage is not confirmed. Keep this item open.');
+          var requiredOriginals=window.ECHStudio.snapshotDraft().photos.filter(function(photo){return photo.originalAvailable!==false;}).length;
+          var savedOriginals=await window.ECHCloud.archiveOriginals(refs);
+          if(savedOriginals!==requiredOriginals)throw new Error('Full original storage is incomplete. Keep this item open and retry saving photos.');
+        }
       }
     }
     if(localError&&!cloudSaved)throw new Error('Device photo storage could not save this item, and no current cloud backup was confirmed. '+(localError.message||''));
@@ -161,6 +190,9 @@
   window.ECHQueue={preserveCurrent:preserveBeforeSwitch};
   $('loadPrepared').addEventListener('click',loadSelected);
   $('syncApprovals').addEventListener('click',function(){syncApprovals(false);});
+  $('nextProduct').addEventListener('click',function(){
+    $('preparedSelect').closest('section').scrollIntoView({behavior:'smooth',block:'start'});$('preparedSelect').focus();
+  });
   $('importPrepared').addEventListener('click',function(){ $('preparedFile').click(); });
   $('preparedFile').addEventListener('change',function(e){
     var f=e.target.files[0]; if(!f)return; var rd=new FileReader();
@@ -255,7 +287,9 @@
         }
         var accepted=await postToHub(endpoint,result);
         confirmed=true;
+        $('nextProduct').hidden=false;
         if(window.ECHCloud)window.ECHCloud.submitted();
+        if(window.ECHStudio.showReceipt)window.ECHStudio.showReceipt();
         removeSubmitted(submittingQueueId);
         handoffMessage('Sent to Lee ✓ Review '+String(accepted.reviewId||'').slice(0,8)+' is waiting. Nothing was published to eBay.');
         status('Sent to Lee for approval.');

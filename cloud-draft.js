@@ -1,7 +1,7 @@
 (function(){
   'use strict';
   var timer, busy=null, recovering=false, recoveryFailed=false, stopped=false, cache={}, originalCache={}, revision=0;
-  var recoveryTask=null,recoveryGeneration=0,originalAutoConsent='',recoveredDraft=null;
+  var recoveryTask=null,recoveryGeneration=0,originalAutoConsent='',recoveredDraft=null,serverRevision=0,pendingSave=null;
   var status=document.createElement('div');
   status.id='cloudSaveStatus';status.setAttribute('role','status');
   status.style.cssText='padding:12px;margin:10px 0;background:#eef4f8;border-radius:8px';
@@ -17,7 +17,7 @@
     try{
       var response=await fetch(window.ECH_REVIEW_ENDPOINT+(mode==='original'?'?mode=original':''),{method:'POST',body:form,headers:{Authorization:'Bearer '+token},signal:controller.signal});
       var body=await response.json();
-      if(!response.ok)throw new Error(body.error||'Could not confirm cloud storage.');
+      if(!response.ok){var error=new Error(body.error||'Could not confirm cloud storage.');error.code=body.code;throw error;}
       // A signed, server-confirmed receipt is a terminal success, not a failed
       // recovery. Only reads may consume it; uploads must never treat it as a photo.
       if(body.reviewId&&mode!=='draft-read')throw new Error('This item has already been sent to Lee.');
@@ -29,6 +29,36 @@
     // Permissions belong to a physical job, not every item sharing its SKU.
     // The token stays solely in this in-memory key, never in a saved snapshot.
     return JSON.stringify([item._draftId||item.productId||'',item.reviewToken,sha]);
+  }
+  async function saveSnapshot(token,snapshot){
+    // Reuse the exact mutation after a lost reply. Reading a matching saved
+    // mutation confirms success without asking Paige to repeat or reconcile it.
+    async function confirm(pending){
+      var lastError;
+      for(var attempt=0;attempt<2;attempt++){
+        try{
+          var result=await request('draft-save',pending.token,{snapshot:JSON.stringify(pending.snapshot)});
+          if(result.snapshot&&Number.isInteger(result.snapshot._revision))serverRevision=result.snapshot._revision;
+          return;
+        }catch(error){
+          lastError=error;
+          if(error.code==='draft_revision_conflict')throw error;
+          try{
+            var observed=await request('draft-read',pending.token,{}),saved=observed.snapshot;
+            if(saved&&saved._mutationId===pending.snapshot._mutationId){serverRevision=saved._revision;return;}
+          }catch(readError){/* Retry the same mutation; never invent a receipt. */}
+        }
+      }
+      throw lastError;
+    }
+    if(pendingSave){
+      if(pendingSave.token!==token)throw new Error('Previous photo saving is not confirmed. Keep that product open.');
+      await confirm(pendingSave);pendingSave=null;
+    }
+    snapshot._baseRevision=serverRevision;
+    snapshot._mutationId=crypto.randomUUID();
+    pendingSave={token:token,snapshot:snapshot};
+    await confirm(pendingSave);pendingSave=null;
   }
   async function saveNow(){
     if(recovering||recoveryFailed)throw new Error('Please wait for cloud recovery or tap Retry saving photos.');
@@ -49,14 +79,14 @@
         refs[i]=cache[key];
         // Each confirmed photo is attached immediately, even if a later upload fails.
         var clean=Object.assign({},item);delete clean.reviewToken;
-        await request('draft-save',token,{snapshot:JSON.stringify({updatedAt:savedAt,item:clean,photos:refs.filter(Boolean)})});
+        await saveSnapshot(token,{updatedAt:savedAt,item:clean,photos:refs.filter(Boolean)});
       }
-      if(!files.length){var clean=Object.assign({},item);delete clean.reviewToken;await request('draft-save',token,{snapshot:JSON.stringify({updatedAt:savedAt,item:clean,photos:[]})});}
+      if(!files.length){var clean=Object.assign({},item);delete clean.reviewToken;await saveSnapshot(token,{updatedAt:savedAt,item:clean,photos:[]});}
       if(version===revision)say(files.length+' photos saved securely in the cloud ✓');
       if(version===revision&&originalAutoConsent===item._draftId)await archiveOriginals(refs);
       return refs;
     })();
-    try{return await busy;}catch(error){say('Not all photos are saved yet. Keep this page open and tap Retry saving photos.',true);throw error;}
+    try{return await busy;}catch(error){say(error.code==='draft_revision_conflict'?error.message:'Not all photos are saved yet. Keep this page open and tap Retry saving photos.',true);throw error;}
     finally{busy=null;}
   }
   async function archiveOriginals(refs){
@@ -99,17 +129,19 @@
   function schedule(){revision++;clearTimeout(timer);if(!recovering&&!stopped)timer=setTimeout(function(){saveNow().catch(function(){});},1200);}
   async function recover(){
     var generation=++recoveryGeneration;
-    clearTimeout(timer);recovering=true;recoveryFailed=false;stopped=false;recoveredDraft=null;photoGate(true);
+    clearTimeout(timer);recovering=true;recoveryFailed=false;stopped=false;recoveredDraft=null;serverRevision=0;photoGate(true);
     var studio=window.ECHStudio,item=studio.getState(),token=item.reviewToken;
     if(!token){recovering=false;photoGate(false);say('Choose a product to save its photos securely.');return;}
     say('Checking for saved cloud photos…');
     try{
       var result=await request('draft-read',token,{}), draft=result.snapshot;
       if(generation!==recoveryGeneration)return;
+      serverRevision=draft&&Number.isInteger(draft._revision)?draft._revision:0;
       if(result.reviewId){
         stopped=true;
         var send=document.getElementById('sendToLee');
         if(send){send.disabled=true;send.textContent='Sent to Lee ✓';}
+        if(studio.showReceipt)studio.showReceipt();
         say('This item was already sent to Lee. Choose the next product above.');
         return;
       }

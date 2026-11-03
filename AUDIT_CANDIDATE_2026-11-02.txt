@@ -1,0 +1,53 @@
+HISTORICAL audit1 checkpoint. See READINESS_CANDIDATE_2026-11-02.txt for the newer local candidate.
+
+PAIGE INDEPENDENT AUDIT CANDIDATE - NOT DEPLOYED
+Base: 8646681ba3dcc2a93a592cd49e9e7fc2c3d61b38 / live24rc17.
+Branch: codex/paige-independent-audit-20261102.
+Candidate marker: 24rc18-audit1. This is not a production acceptance claim.
+
+Changes
+- Compare-and-set cloud draft revisions, serialized using the existing exact-job token row lock.
+- Receiver checks full-original storage bytes/size/SHA before receipt, requiring originals by default.
+- Missing-original exception requires private authorization_data.legacyOriginalsUnavailable=true;
+  no real job was granted this exception by the audit. Never derive it from a client packet.
+- Switching after a failed local save explicitly confirms available originals in cloud storage.
+- Boot-time legacy text is not treated as a fresh human correction, permitting newer recovery.
+- Validate all condition/title variants before a prepared product becomes available for photos.
+- Fix mock backend original mapping and retain reload failure receipts in the test harness.
+
+Reproduce
+Use Node24 and install the pinned tests/server-runtime dependency with pnpm --frozen-lockfile.
+Run npm test (9 source/VM suites).
+Run node tests/server-runtime/independent-audit.mjs for DEPLOYED baseline failures.
+Run node tests/server-runtime/independent-audit.mjs --candidate for proposed guards.
+Run node tests/server-runtime/integration.mjs, originals.mjs, correction.mjs, owner-intake.mjs.
+Those are local PostgreSQL/transport fixtures, never hosted acceptance.
+Desktop: ECH_LOCAL_PORT=8893 node tests/dev-server.mjs, open /?acceptance=1,
+click Run acceptance suite, then open /?acceptance=1&resume=1 and /?acceptance=1&sent=1.
+Actual camera/HEIC/Safari/PWA, installed cache upgrade, device restart, Mini and hosted
+positive intake remain separate acceptance gates. Never clear old device storage/drafts.
+
+Deployment coordination REQUIRED
+Do not deploy this checkout or cherry-pick only its frontend. server/audit-proposals/
+contains REVIEW SQL, not applied migrations. Convert using the real deployment owner's
+migration workflow only after rechecking current function fingerprints/concurrent changes.
+The revision SQL and cloud-draft.js form one contract. Older tabs lack _baseRevision and
+will fail closed on draft saves after SQL cutover. Preserve local/cloud originals first;
+plan a recoverable upgrade with existing drafts before any release. Uncoordinated cutover
+would introduce a new operator failure and is not approved by this audit.
+Rollback source is the exact tests/audit-deployed/* SQL and deployed Edge source snapshots.
+Do not restore frontend alone after revision changes. Preserve all post-cutover revisions.
+No eBay writes, schedules, credentials, real job submissions, or production code changes
+were made by this audit. Nov2 assigned-cost/flat-postage commercial repairs are untouched.
+
+Open engineering/acceptance work
+- Revision conflict protects both copies but requires Lee to reconcile; no version-choice UI yet.
+- A committed draft save with a lost response also requires fresh revision recovery, not blind retry.
+- New strict-original guard can block legacy drafts: inventory/approve exceptions individually,
+  and prove all retained originals/legacy recovery before release. No global exemption.
+- Per-original verification adds network latency; real large-file/edge-deadline tests pending.
+- Installed service-worker/cache/update and actual phone/PWA/Mini tests remain unverified.
+- Hub acquisition wording and flat buyerPostage form contract require authoritative Mini source;
+  do not deploy a stale local Hub copy. Separate business-process audit remains in original chat.
+- Current hosted synthetic positive receiver/return/approval roundtrip still needs a clearly
+  nonpublishable QA job through the normal owner-authorized workflow; no real token reuse.

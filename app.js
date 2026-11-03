@@ -11,6 +11,8 @@
   /* ---------- shared state ---------- */
   var step = 1;
   var photos = []; // {name, img}
+  var unreadableOriginals=[];
+  var received=false;
   var productGeneration=0;
   var pendingPhotos=[];
   var draftId="", hasCorrections=false;
@@ -30,12 +32,13 @@
     });
     var back = $('#navBack'), next = $('#navNext');
     back.disabled = step === 1;
-    next.textContent = step === 4 ? "Start next item  ↻" : "Next  →";
+    next.textContent = step === 4 ? "Start next item  ↻" : (step===2?'Item notes (optional)':(step===3?'Back to photos':'Next  →'));
     var activePanel = $('.panel.active');
     if(activePanel) activePanel.scrollIntoView({block:'start', behavior:'smooth'});
   }
   $('#navBack').addEventListener('click', function(){ go(step-1); });
   $('#navNext').addEventListener('click', function(){
+    if(step===3&&state().reviewToken){go(2);return;}
     if(step === 4){ startOver(); return; }
     if(step === 1 && !cond()){ toast('Choose the condition before going on'); return; }
     go(step+1);
@@ -90,6 +93,7 @@
 
   function updatePhotoSummary(){
     var el=$('#photoSummary');
+    if(received){el.className='photo-summary ready-photo';el.textContent='Sent to Lee ✓ Your receipt and originals are retained.';return;}
     if(!photos.length){ el.className='photo-summary'; el.textContent='Add at least one exact-product photo.'; return; }
     var small=photos.reduce(function(n,f){return n+(normalizePhoto(f).small?1:0);},0);
     if(small){
@@ -100,10 +104,17 @@
       el.textContent='Photos ready ✓ Clean JPEGs with no badges or added text.';
     }
   }
+  function receiptView(on){
+    received=on;$('#photoHeading').textContent=on?'Sent to Lee':'Add the photos';$('#photoIntro').hidden=on;
+    ['takePhoto','choosePhoto','clearPhotos'].forEach(function(id){$('#'+id).hidden=on;});
+    $('#shots').hidden=on&&!photos.length;
+    if(on){$('#handoffStatus').textContent='Lee has received this item for review. Nothing was published to eBay.';updatePhotoSummary();}
+  }
 
   function drawShots(){
     document.dispatchEvent(new Event('ech:draftChanged'));
     var host = $('#shots');
+    host.hidden=received&&!photos.length;
     updatePhotoSummary();
     if(!photos.length){ host.innerHTML = '<div class="empty">No photos yet. Use the buttons above to take or choose photos.</div>'; return; }
     host.innerHTML = "";
@@ -131,22 +142,26 @@
   }
 
   function addFiles(list){
-    var generation=productGeneration;
+    var generation=productGeneration,captureId=draftId;
     Array.prototype.forEach.call(list,function(file){
       if(!/^image\//.test(file.type))return;
       var before=pendingPhotos.length?pendingPhotos[pendingPhotos.length-1]:Promise.resolve();
       var pending=before.then(function(){return new Promise(function(resolve){
         var rd=new FileReader();
-        rd.onload=function(){var im=new Image();
+        rd.onload=function(){
+          var ownedOriginal=new File([dataUrlToBlob(rd.result)],file.name||'photo.jpeg',{type:file.type,lastModified:file.lastModified||Date.now()});
+          var originalRecord={name:ownedOriginal.name,original:ownedOriginal,originalAvailable:true};
+          var archive=window.ECHDraftStore&&window.ECHDraftStore.archiveOriginal?window.ECHDraftStore.archiveOriginal(captureId,originalRecord):Promise.resolve();
+          Promise.resolve(archive).catch(function(){toast('Original not saved on this device yet. Keep this page open.');}).then(function(){var im=new Image();
           im.onload=function(){if(generation===productGeneration){
             // iOS picker Files can lose their external backing after the picker
             // closes. Own the exact bytes already read, before retaining a file.
-            var ownedOriginal=new File([dataUrlToBlob(rd.result)],file.name||'photo.jpeg',{type:file.type,lastModified:file.lastModified||Date.now()});
             photos.push({original:ownedOriginal,name:file.name||('photo-'+(photos.length+1)+'.jpeg'),img:im});drawShots();document.dispatchEvent(new Event('ech:originalAdded'));
           }resolve();};
-          im.onerror=function(){toast('This photo could not be opened. Choose the original again.');resolve();};im.src=rd.result;
+          im.onerror=function(){if(generation===productGeneration){unreadableOriginals.push(originalRecord);document.dispatchEvent(new Event('ech:draftChanged'));}toast('This photo could not be opened. Its original is retained; keep this page open and ask Lee.');resolve();};im.src=rd.result;
+          });
         };
-        rd.onerror=function(){toast('Could not read this photo. Keep your original and try again.');resolve();};rd.readAsDataURL(file);
+        rd.onerror=rd.onabort=function(){toast('Could not read this photo. Keep your original and try again.');resolve();};try{rd.readAsDataURL(file);}catch(error){rd.onerror();}
       });});
       pendingPhotos.push(pending);pending.then(function(){pendingPhotos=pendingPhotos.filter(function(p){return p!==pending;});});
     });
@@ -245,7 +260,7 @@
       banner.innerHTML = '<b>Title is too long.</b> Take out ' + (n-80) + ' letters so it fits eBay’s 80.';
     } else {
       banner.className = 'banner good';
-      banner.innerHTML = '<b>Ready!</b> Go to the last step and send it to Lee.';
+      banner.innerHTML = '<b>Ready!</b> Send your condition and photos to Lee from the Photos step.';
     }
     save();
   }
@@ -357,7 +372,10 @@
     // seed rows
     ['box','spec','ver'].forEach(function(k){ $('#'+k+'Rows').innerHTML=''; });
     if(s){
-      draftId=s._draftId||s.productId||s.sku||crypto.randomUUID();hasCorrections=true;
+      // A boot-time legacy text cache is a recovery candidate, not an edit
+      // made in this session. Let cloud/IndexedDB timestamp reconciliation
+      // restore newer facts before treating subsequent human input as dirty.
+      draftId=s._draftId||s.productId||s.sku||crypto.randomUUID();hasCorrections=false;
       var hasSavedProduct=!!(s.sku||s.productId||s.brand||s.part||s.what||s.title||s.pdesc);
       document.querySelectorAll('input[name=cond]').forEach(function(x){ x.checked=false; });
       $('#quantityConfirmed').checked=s.quantityConfirmed===true;$('#physicalQuantity').textContent='Available quantity: '+(s.availableQuantity||'not entered')+' buyer unit(s).';
@@ -397,7 +415,7 @@
     if(!confirm('Start a fresh item? This clears the photos and the details.')) return;
     productGeneration++;draftId=crypto.randomUUID();hasCorrections=false;$('#quantityConfirmed').checked=false;
     try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
-    photos=[]; drawShots();
+    photos=[];unreadableOriginals=[];receiptView(false); drawShots();
     ['serialNumber','packaging','defects','sku','productId','availableQuantity','fulfillment','reviewToken','isPassive','compatibilityNote','catalogNote','ebayCategoryId','ebayCategoryName','ebayCategoryPath','ebayCategoryVerifiedAt','targetPrice','shippingPlan','packedWeightLb','packedLengthIn','packedWidthIn','packedHeightIn','researchNotes','brand','part','what','sold','headline','hook','productdesc','mounting'].forEach(function(k){ $('#'+k).value=''; });
     document.querySelectorAll('input[name=cond]').forEach(function(r){ r.checked=false; });
     ['box','spec','ver'].forEach(function(k){ $('#'+k+'Rows').innerHTML=''; });
@@ -420,14 +438,16 @@
   drawShots();
 
   function loadPreparedItem(s){
+    receiptView(false);
     productGeneration++;
     s=s||{};
     var previousDraftId=draftId;
     draftId=s._draftId||s._queueId||s.queueId||s.productId||crypto.randomUUID();hasCorrections=false;
     $('#quantityConfirmed').checked=s.quantityConfirmed===true;$('#physicalQuantity').textContent='Available quantity: '+(s.availableQuantity||'not entered')+' buyer unit(s).';
     $('#sendToLee').disabled=false;$('#sendToLee').textContent='Send to Lee for approval';
+    $('#nextProduct').hidden=true;
     $('#handoffStatus').textContent='Lee will review this item before publication.';
-    if(draftId!==previousDraftId||(s.sku&&s.sku!==$('#sku').value))photos=[];
+    if(draftId!==previousDraftId||(s.sku&&s.sku!==$('#sku').value)){photos=[];unreadableOriginals=[];}
     // Only clean incoming preparation, never overwrite an in-progress draft.
     s=Object.assign({},s);
     if(/being (documented|prepared|photographed)|photos must|complete boxes are available/i.test(s.hook||''))s.hook='';
@@ -458,9 +478,10 @@
   }
   document.addEventListener('ech:loadPrepared', function(e){ loadPreparedItem(e.detail||{}); });
   window.ECHStudio = {
-    snapshotDraft:function(){var item=state();delete item.reviewToken;return {id:draftId,updatedAt:new Date().toISOString(),item:item,photos:photos.map(function(f,index){return {name:f.name,original:f.original||new File([dataUrlToBlob(normalizePhoto(f).dataUrl)],photoName(index),{type:"image/jpeg"}),originalAvailable:!!f.original&&f.originalAvailable!==false};})};},
-    restoreLocalDraft:async function(record){var current=state();if(record.id!==draftId||record.item.sku!==current.sku)throw new Error("Local draft belongs to another item.");var item=Object.assign({},record.item,{reviewToken:current.reviewToken,_draftId:draftId});await window.ECHStudio.restoreCloud(item,record.photos.map(function(f){return f.original;}),true);photos.forEach(function(f,i){f.originalAvailable=record.photos[i].originalAvailable;});hasCorrections=true;drawShots();},
+    snapshotDraft:function(){var item=state();delete item.reviewToken;return {id:draftId,updatedAt:new Date().toISOString(),item:item,extraOriginals:unreadableOriginals.slice(),photos:photos.map(function(f,index){return {name:f.name,original:f.original||new File([dataUrlToBlob(normalizePhoto(f).dataUrl)],photoName(index),{type:"image/jpeg"}),originalAvailable:!!f.original&&f.originalAvailable!==false};})};},
+    restoreLocalDraft:async function(record){var current=state();if(record.id!==draftId||record.item.sku!==current.sku)throw new Error("Local draft belongs to another item.");var item=Object.assign({},record.item,{reviewToken:current.reviewToken,_draftId:draftId});await window.ECHStudio.restoreCloud(item,record.photos.map(function(f){return f.original;}),true);photos.forEach(function(f,i){f.originalAvailable=record.photos[i].originalAvailable;});unreadableOriginals=(record.extraOriginals||[]).slice();hasCorrections=true;drawShots();},
     getState: state,
+    showReceipt:function(){receiptView(true);go(2);$('#nextProduct').hidden=false;},
     exportReferencePhotos:async function(){return Promise.all(photos.map(referenceFile));},
     addPhotoFiles:addFiles,
     loadPrepared: loadPreparedItem,
@@ -470,6 +491,7 @@
     reviewIssues: reviewIssues,
     prepareReview: prepareReview,
     photoCount: function(){ return photos.length; },
+    unreadablePhotoCount:function(){return unreadableOriginals.length;},
     waitForPhotos:waitForPhotos,
     exportPhotos: function(){return photos.map(function(f,index){var r=normalizePhoto(f);return new File([dataUrlToBlob(r.dataUrl)],photoName(index),{type:'image/jpeg'});});},
     restoreCloud: async function(s,files,forceLocal,originalFlags){

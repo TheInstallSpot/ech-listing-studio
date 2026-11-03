@@ -34,7 +34,13 @@ export async function createSystem({directory,baseline=false}={}){
  await db.exec(await fs.readFile(path.join(root,'server/release/ECH_CORRECTION_LIFECYCLE.sql'),'utf8'));
  await db.exec((await fs.readFile(path.join(root,'server/release/ECH_CORRECTION_RESEARCH_FUNCTIONS.sql'),'utf8')).replace(/DO \$guard\$[\s\S]*?END \$guard\$;/,''));
  await db.exec(await fs.readFile(path.join(root,'server/release/ECH_TOKEN_INSPECTION_SERVICE_ONLY.sql'),'utf8'));
- const failures={upload:false,draft:false,afterCommit:false,sign:false};let lastReview=null;
+ if(process.env.ECH_DRAFT_V29==='1'){
+  await db.exec(await fs.readFile(path.join(root,'tests/audit-deployed/pending-commercial.sql'),'utf8'));
+  await db.exec(await fs.readFile(path.join(root,'tests/audit-deployed/current-review-constraint.sql'),'utf8'));
+  await db.exec(await fs.readFile(path.join(root,'server/audit-proposals/draft-revision.sql'),'utf8'));
+  await db.exec(await fs.readFile(path.join(root,'server/audit-proposals/require-originals.sql'),'utf8'));
+ }
+ const failures={upload:false,draft:false,afterCommit:false,sign:false,originalRead:false,corruptOriginalRead:false,afterOriginalStore:false};let lastReview=null;
  async function rpc(name,args){if(!rpcs.has(name))throw Error('Unsupported isolated RPC');const keys=Object.keys(args);const {rows}=await db.query(`select public.${name}(${keys.map((k,i)=>`${k} => $${i+1}`).join(',')}) as result`,keys.map(k=>args[k]));return rows[0].result;}
  function diskPath(key){if(!/^(ech-review-photos|ech-original-photos)\//.test(key))key='ech-review-photos/'+key;const target=path.resolve(data,'photos',key);if(!target.startsWith(path.resolve(data,'photos')+path.sep))throw Error('Invalid storage path');return target;}
  const reply=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json'}});
@@ -50,11 +56,16 @@ export async function createSystem({directory,baseline=false}={}){
   const rest=u.pathname.slice(prefix.length);const mode=rest.startsWith('sign/')?'sign':rest.startsWith('authenticated/')?'get':'object';
   const withBucket=mode==='object'?rest:rest.slice(mode==='sign'?5:14);const key=decodeURIComponent(withBucket);const bucket=withBucket.split('/')[0];
   if(mode==='sign'){if(failures.sign){failures.sign=false;return reply({},503);}await fs.access(diskPath(key));return reply({signedURL:'/object/authenticated/'+key});}
-  if(mode==='get'){try{return new Response(await fs.readFile(diskPath(key)),{headers:{'content-type':'image/jpeg'}});}catch{return reply({},404);}}
+  if(mode==='get'){
+   if(key.startsWith('ech-original-photos/')&&failures.originalRead){failures.originalRead=false;return reply({},404);}
+   try{const bytes=await fs.readFile(diskPath(key));if(key.startsWith('ech-original-photos/')&&failures.corruptOriginalRead){failures.corruptOriginalRead=false;bytes[bytes.length-1]^=1;}return new Response(bytes,{headers:{'content-type':'image/jpeg'}});}catch{return reply({},404);}
+  }
   if(opts.method==='DELETE'){for(const k of JSON.parse(opts.body).prefixes)await fs.unlink(diskPath(k)).catch(()=>{});return reply({});}
   if(failures.upload){failures.upload=false;return reply({},503);}
   if(opts.headers?.['x-upsert']==='false'){try{await fs.access(diskPath(key));return reply({message:'already exists'},409);}catch{}}
-  const bytes=opts.body instanceof ArrayBuffer?Buffer.from(opts.body):Buffer.from(await opts.body.arrayBuffer());const file=diskPath(key);await fs.mkdir(path.dirname(file),{recursive:true});await fs.writeFile(file,bytes);return reply({Key:key},200);
+  const bytes=opts.body instanceof ArrayBuffer?Buffer.from(opts.body):Buffer.from(await opts.body.arrayBuffer());const file=diskPath(key);await fs.mkdir(path.dirname(file),{recursive:true});await fs.writeFile(file,bytes);
+  if(key.startsWith('ech-original-photos/')&&failures.afterOriginalStore){failures.afterOriginalStore=false;return reply({message:'Fixture lost original storage response'},503);}
+  return reply({Key:key},200);
  }
  function load(source,extra=''){
   let handler;const ctx={Request,Response,Headers,FormData,File,Blob,URL,TextEncoder,TextDecoder,Uint8Array,ArrayBuffer,AbortSignal,setTimeout,clearTimeout,crypto:webcrypto,fetch:bridge,console:{info(){}},Deno:{env:{get:n=>({SUPABASE_URL:origin,SUPABASE_SERVICE_ROLE_KEY:'synthetic-server-key',ECH_STUDIO_ORIGIN:origin})[n]},serve:fn=>handler=fn}};

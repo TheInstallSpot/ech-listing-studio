@@ -6,7 +6,7 @@ import {createSystem,origin} from './system.mjs';
 const core=createRequire(import.meta.url)('../../builder-core.js');
 const system=await createSystem();
 const jobs=[['INT26-C4-SR260','Control4','SR-260'],['INT26-AVPRO-AC-MXNET-SW10','AVPro Edge','AC-MXNET-SW10'],['INT26-NETGEAR-GS348PP','NETGEAR','GS348PP'],['INT26-EPISODE-ESS-SUB-SNGL-8','Episode','ESS-SUB-SNGL-8'],['INT26-KEF-T301C','KEF','T301C'],['INT26-KEF-CI200QL-GRILLE-WH','KEF','Ci200QL grille'],['INT26-KEF-RIF200R','KEF','RIF200R'],['INT26-KEF-Q6-META-GRILLE','KEF','Q6 Meta grille'],['INT26-KEF-CI200QR-GRILLE-WH','KEF','Ci200QR grille']];
-async function call(job,fields){const form=new FormData();for(const[k,v]of Object.entries(fields))form.append(k,v);const res=await system.review(new Request('http://isolated.local/review',{method:'POST',headers:{origin,authorization:'Bearer '+job.token},body:form}));return {status:res.status,body:await res.json()};}
+async function call(job,fields){const form=new FormData();for(const[k,v]of Object.entries(fields))form.append(k,v);const res=await system.review(new Request('http://isolated.local/review'+(fields.mode==='original'?'?mode=original':''),{method:'POST',headers:{origin,authorization:'Bearer '+job.token},body:form}));return {status:res.status,body:await res.json()};}
 try{
  const browser={window:{}};vm.runInNewContext(await fs.readFile(new URL('../../authorization-registry.js',import.meta.url),'utf8'),browser);
  for(const[sku,brand,part]of jobs)assert.equal(browser.window.ECHAuthorization.check({sku,brand,part,fulfillment:'ech'}).allowed,true);
@@ -25,7 +25,7 @@ try{
   await system.db.query("UPDATE private.ech_review_tokens SET authorization_data=authorization_data||'{\"unitCost\":null}'::jsonb WHERE queue_id=$1",[job.id]);
   const queue=await system.rpc('ech_pin_queue_v24',{p_token:session.token,p_logout:false});assert.ok(queue.items.some(i=>i.queueId===job.id));assert.ok(queue.items.every(i=>i.payload.items.every(p=>!('unitCost' in p)&&!('targetPrice' in p))));
   const photo=new File([new Uint8Array([255,216,255,192,0,17,8,6,164,7,8,3,1,17,0,2,17,0,3,17,0,255,217])],'fixture.jpeg',{type:'image/jpeg'});
-  const upload=await call(job,{mode:'photo',photo});assert.equal(upload.status,201,sku+' photo');
+  const upload=await call(job,{mode:'photo',photo});assert.equal(upload.status,201,sku+' photo');const original=await call(job,{mode:'original',photo,normalizedSha256:upload.body.photo.sha256});assert.equal(original.status,201,sku+' full original');
   const item={...job.item,cond:(sku==='INT26-AVPRO-AC-MXNET-SW10'||(brand==='KEF'&&part!=='T301C'))?'N1':'O2',quantityConfirmed:true};delete item.reviewToken;
   const saved=await call(job,{mode:'draft-save',snapshot:JSON.stringify({item,photos:[upload.body.photo]})});assert.equal(saved.status,200);const recovered=await call(job,{mode:'draft-read'});assert.equal(recovered.body.snapshot.photos.length,1);assert.equal(recovered.body.snapshot.item.sku,sku);
   const listing={schemaVersion:1,queueId:job.id,reviewStatus:'awaiting_lee_approval',item,ebayTitle:core.ebayTitle(item),descriptionHtml:core.build(item),photoManifest:[{name:'fixture.jpeg',width:1800,height:1700}],issues:[]};

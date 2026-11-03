@@ -1,25 +1,26 @@
 /* ECH Listing Studio service worker — offline cache.
    Bump CACHE when you change any file so devices pull the new version. */
-var CACHE = 'ech-studio-local-originals-v24rc17';
+var CACHE = 'ech-studio-local-originals-v24rc18-ready2';
 var ASSETS = [
   './',
-  './review-config.js?v=24rc17',
+  './review-config.js?v=24rc18-ready2',
   './index.html',
   './styles.css',
+  './styles.css?v=24rc18-ready2',
   './masthead.png',
   './masthead.png?v=22',
   './app.js',
-  './app.js?v=24rc17',
-  './draft-store.js?v=24rc17',
-  './draft-local.js?v=24rc17',
-  './cloud-draft.js?v=24rc17',
+  './app.js?v=24rc18-ready2',
+  './draft-store.js?v=24rc18-ready2',
+  './draft-local.js?v=24rc18-ready2',
+  './cloud-draft.js?v=24rc18-ready2',
   './authorization-registry.js',
-  './authorization-registry.js?v=24rc17',
+  './authorization-registry.js?v=24rc18-ready2',
   './agent-queue.js',
   './pin-access.js',
-  './pin-access.js?v=24rc17',
-  './agent-queue.js?v=24rc17',
-  './builder-core.js?v=24rc17',
+  './pin-access.js?v=24rc18-ready2',
+  './agent-queue.js?v=24rc18-ready2',
+  './builder-core.js?v=24rc18-ready2',
   './builder-core.js',
   './manifest.webmanifest',
   './icon-192.png',
@@ -34,11 +35,9 @@ self.addEventListener('install', function(e){
 });
 
 self.addEventListener('activate', function(e){
-  e.waitUntil(
-    caches.keys().then(function(keys){
-      return Promise.all(keys.map(function(k){ if(k!==CACHE) return caches.delete(k); }));
-    }).then(function(){ return self.clients.claim(); })
-  );
+  // Existing tabs may still need their versioned shell while offline. Retain
+  // prior caches during this release; never delete another app's origin cache.
+  e.waitUntil(self.clients.claim());
 });
 
 self.addEventListener('fetch', function(e){
@@ -51,7 +50,7 @@ self.addEventListener('fetch', function(e){
       e.respondWith(fetch(e.request,{cache:'no-store'}).then(function(res){
         if(res.ok){var copy=res.clone();caches.open(CACHE).then(function(c){c.put(e.request,copy);});}
         return res;
-      }).catch(function(){return caches.match(e.request).then(function(hit){return hit||caches.match('./index.html');});}));
+      }).catch(function(){return caches.match(e.request,{cacheName:CACHE}).then(function(hit){return hit||caches.match('./index.html',{cacheName:CACHE});});}));
       return;
     }
     e.respondWith(
@@ -61,17 +60,12 @@ self.addEventListener('fetch', function(e){
           var usable=res.ok&&(e.request.destination!=='image'||(res.headers.get('Content-Type')||'').indexOf('image/')===0);
           if(usable){var copy = res.clone();caches.open(CACHE).then(function(c){ c.put(e.request, copy); });}
           return res;
-        }).catch(function(){ return Response.error(); });
+        }).catch(function(){ return caches.match(e.request).then(function(previous){return previous||Response.error();}); });
       })
     );
     return;
   }
-  // Cross-origin (e.g. Google Fonts): network, fall back to cache if seen before.
-  e.respondWith(
-    fetch(e.request).then(function(res){
-      var copy = res.clone();
-      caches.open(CACHE).then(function(c){ c.put(e.request, copy); });
-      return res;
-    }).catch(function(){ return caches.match(e.request); })
-  );
+  // Signed original-photo URLs and authenticated API responses must never be
+  // copied into the shell cache. Durable originals belong to IndexedDB/Storage.
+  e.respondWith(fetch(e.request));
 });
