@@ -136,7 +136,16 @@
     // A failed device original/blob lookup must not prevent trying the
     // independent cloud backup. Never leave without a durable confirmation.
     if(window.ECHDrafts){try{await window.ECHDrafts.flush();}catch(e){localError=e;}}
-    if(localError&&window.ECHStudio.unreadablePhotoCount&&window.ECHStudio.unreadablePhotoCount())throw new Error('An unreadable original is not confirmed saved on this device. Keep this item open and ask Lee.');
+    // A completed/retired job may have a durable receipt but an expired
+    // upload permission and stale iOS File handles. Retry its read-only receipt
+    // before requiring a new write. Never grant it upload permission again.
+    if(localError&&retiredEmpty&&!cloudSaved&&window.ECHCloud){
+      try{await window.ECHCloud.ready();}catch(error){
+        if(window.ECHCloud.retryRecovery)await window.ECHCloud.retryRecovery();else throw error;
+      }
+      cloudSaved=!!(window.ECHCloud.isSubmitted&&window.ECHCloud.isSubmitted());
+    }
+    if(localError&&!cloudSaved&&window.ECHStudio.unreadablePhotoCount&&window.ECHStudio.unreadablePhotoCount())throw new Error('An unreadable original is not confirmed saved on this device. Keep this item open and ask Lee.');
     if(window.ECHCloud&&!retiredEmpty){
       try{await window.ECHCloud.ready();}
       catch(error){
