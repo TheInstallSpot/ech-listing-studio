@@ -16,14 +16,22 @@
     var sku=String(item&&item.sku||'');
     return norm(item&&item.brand)==='KEF' && ownerKefIntake[sku]===norm(item&&item.part) && String(item&&item.fulfillment||'').toLowerCase()==='ech';
   }
+  function ownedNov16Exception(item){
+    var approved={
+      'NOV16-KEF-CI200RR-THX':['KEF','CI200RRTHX'],
+      'NOV16-KEF-CI130QRFL':['KEF','CI130QRFL'],
+      'NOV16-FOCAL-300-ICLCR5':['FOCAL','300ICLCR5']
+    }[String(item&&item.sku||'')];
+    return Boolean(approved && norm(item.brand)===approved[0] && norm(item.part)===approved[1] && String(item.fulfillment||'').toLowerCase()==='ech');
+  }
   function check(item){
     var brand=norm(item&&item.brand), sku=norm(item&&item.sku), part=norm(item&&item.part);
     // Current owner holds apply to all conditions and fulfillment paths.
     // These are not lifted by supplier availability or a generic approval flag.
-    var exactKefException=ownerKefException(item);
+    var exactKefException=ownerKefException(item), exactOwnedException=ownedNov16Exception(item);
     var heldBrand=(brand==='KEF'&&!exactKefException)||brand==='FOCAL'||brand==='DEFINITIVETECHNOLOGY';
     var heldSku=/^(KEF|FOCAL|DEFINITIVE[ _-]*TECHNOLOGY)[-_]/i.test(String(item&&item.sku||''));
-    if(heldBrand||(heldSku&&!exactKefException))return {allowed:false,restricted:true,reason:'This product is on Lee\'s current ECH listing hold.',note:'Lee must explicitly lift the exact hold before this product can enter the listing workflow.'};
+    if((heldBrand||(heldSku&&!exactKefException))&&!exactOwnedException)return {allowed:false,restricted:true,reason:'This product is on Lee\'s current ECH listing hold.',note:'Lee must explicitly lift the exact hold before this product can enter the listing workflow.'};
     if(brand==='SONANCE' && (sku.indexOf('MAG')!==-1 || part.indexOf('MAG')!==-1)) return {allowed:false,restricted:true,reason:'This Sonance MAG product is not approved for the normal wholesale queue.',note:'MAG kits are Best Buy exclusives.'};
     if(brand==='SONY'&&(/ES$/.test(part)||/(^|[-_])ES($|[-_])/i.test(String(item&&item.sku||''))))return {allowed:false,restricted:true,reason:'Sony ES products are not approved for eBay.'};
     if((brand==='EPISODE'||brand==='TRIAD')&&String(item&&item.fulfillment||'').toLowerCase()==='distributor')return {allowed:false,restricted:true,reason:'This wholesale channel requires an exact reviewed exception.'};
