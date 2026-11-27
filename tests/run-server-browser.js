@@ -66,9 +66,9 @@
   await window.ECHPin.list();ok(true,'Saved authenticated session reconnects after server restart');await record('restart');
  }catch(e){tests.push({test:e.message,status:'FAIL'});out.textContent=JSON.stringify(tests,null,2);await record('restart');}})();
  if(phase==='next')(async function(){try{
-  await window.ECHCloud.ready();await window.ECHDrafts.ready();var previous=window.ECHStudio.getState()._draftId;
+  await window.ECHCloud.ready();await window.ECHDrafts.ready();var previous=JSON.parse(localStorage.getItem('ech-real-server-resume')).id;
   await waitFor(function(){return document.getElementById('preparedSelect').options.length===2;});
-  var sel=document.getElementById('preparedSelect');sel.value='0';sel.dispatchEvent(new Event('change',{bubbles:true}));
+  var sel=document.getElementById('preparedSelect');if(window.ECHStudio.getState()._draftId===previous){sel.value='0';sel.dispatchEvent(new Event('change',{bubbles:true}));}
   await waitFor(function(){return window.ECHStudio.getState()._draftId!==previous;});await window.ECHCloud.ready();await window.ECHDrafts.ready();
   ok(window.ECHStudio.photoCount()===0,'Next physical job with identical SKU does not inherit prior photos');
   ok(!window.ECHStudio.getState().cond&&!window.ECHStudio.getState().quantityConfirmed,'Next physical job requires fresh condition and contents confirmation');
