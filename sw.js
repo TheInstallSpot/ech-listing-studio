@@ -1,26 +1,26 @@
 /* ECH Listing Studio service worker — offline cache.
    Bump CACHE when you change any file so devices pull the new version. */
-var CACHE = 'ech-studio-local-originals-v24rc21-receipt-recovery';
+var CACHE = 'ech-studio-local-originals-v24rc22-private-sourcing';
 var ASSETS = [
   './',
-  './review-config.js?v=24rc21-receipt-recovery',
+  './review-config.js?v=24rc22-private-sourcing',
   './index.html',
   './styles.css',
-  './styles.css?v=24rc21-receipt-recovery',
+  './styles.css?v=24rc22-private-sourcing',
   './masthead.png',
   './masthead.png?v=22',
   './app.js',
-  './app.js?v=24rc21-receipt-recovery',
-  './draft-store.js?v=24rc21-receipt-recovery',
-  './draft-local.js?v=24rc21-receipt-recovery',
-  './cloud-draft.js?v=24rc21-receipt-recovery',
+  './app.js?v=24rc22-private-sourcing',
+  './draft-store.js?v=24rc22-private-sourcing',
+  './draft-local.js?v=24rc22-private-sourcing',
+  './cloud-draft.js?v=24rc22-private-sourcing',
   './authorization-registry.js',
-  './authorization-registry.js?v=24rc21-receipt-recovery',
+  './authorization-registry.js?v=24rc22-private-sourcing',
   './agent-queue.js',
   './pin-access.js',
-  './pin-access.js?v=24rc21-receipt-recovery',
-  './agent-queue.js?v=24rc21-receipt-recovery',
-  './builder-core.js?v=24rc21-receipt-recovery',
+  './pin-access.js?v=24rc22-private-sourcing',
+  './agent-queue.js?v=24rc22-private-sourcing',
+  './builder-core.js?v=24rc22-private-sourcing',
   './builder-core.js',
   './manifest.webmanifest',
   './icon-192.png',
@@ -69,3 +69,4 @@ self.addEventListener('fetch', function(e){
   // copied into the shell cache. Durable originals belong to IndexedDB/Storage.
   e.respondWith(fetch(e.request));
 });
+
