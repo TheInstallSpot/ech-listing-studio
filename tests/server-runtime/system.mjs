@@ -71,8 +71,10 @@ export async function createSystem({directory,baseline=false}={}){
   let handler;const ctx={Request,Response,Headers,FormData,File,Blob,URL,TextEncoder,TextDecoder,Uint8Array,ArrayBuffer,AbortSignal,setTimeout,clearTimeout,crypto:webcrypto,fetch:bridge,console:{info(){}},Deno:{env:{get:n=>({SUPABASE_URL:origin,SUPABASE_SERVICE_ROLE_KEY:'synthetic-server-key',ECH_STUDIO_ORIGIN:origin})[n]},serve:fn=>handler=fn}};
   vm.createContext(ctx);const js=stripTypeScriptTypes(extra+'\n'+source.replace(/^import[^\n]+\n/gm,''),{mode:'strip'});new vm.Script(js).runInContext(ctx);return handler;
  }
- const family=baseline?'baseline':'candidate';const shared=baseline?'':(await fs.readFile(path.join(root,'server/shared/listing-core.ts'),'utf8')).replace(/^export .*$/gm,'');
- const review=load(await fs.readFile(path.join(root,`server/${family}/ech-listing-review/index.ts`),'utf8'),shared);
+ const family=baseline?'baseline':'candidate';
+ const live=!baseline&&process.env.ECH_LIVE_RECEIVER==='1';
+ const shared=baseline?'':(await fs.readFile(path.join(root,live?'server/live-20261127/listing-core.ts':'server/shared/listing-core.ts'),'utf8')).replace(/^export .*$/gm,'');
+ const review=load(await fs.readFile(path.join(root,live?'server/live-20261127/index.ts':`server/${family}/ech-listing-review/index.ts`),'utf8'),shared);
  const pin=load(await fs.readFile(path.join(root,`server/${family}/ech-paige-pin/index.ts`),'utf8'));
  async function seed({id=randomUUID(),sku='QA-SPEAKER',brand='Fixture',part='QA-100',token=digest(randomUUID()),expiry='7 days',price='199.99'}={}){
   const item={_queueId:id,productId:sku,sku,brand,part,what:'Passive Speaker',sold:'Each',title:'Fixture QA-100 Passive Speaker',pdesc:'Synthetic local equipment.',box:['One speaker','One grille'],spec:[['Impedance','8 ohms']],ver:['Fixture label checked'],availableQuantity:'2',fulfillment:'ech',isPassive:true,reviewToken:token,ebayCategoryId:'14990',targetPrice:price};

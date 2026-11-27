@@ -25,12 +25,20 @@
 
   function authorization(it){
     var result=window.ECHAuthorization?window.ECHAuthorization.check(it):{allowed:true,restricted:false,reason:''};
-    if(result.allowed&&window.ECHCore){
-      var variants=[['N1','new_in_box'],['N1','open_box'],['O2','other'],['D3','other']];
-      if(variants.some(function(v){return window.ECHCore.ebayTitle(Object.assign({},it,{cond:v[0],packaging:v[1]})).length>80;}))
-        return {allowed:false,restricted:true,reason:'Lee needs to shorten the prepared title before photos. Your current work is preserved.'};
+    if(result.allowed){
+      var prepared=window.ECHPreparedContract&&window.ECHPreparedContract.validate(it,window.ECHCore);
+      if(!prepared||!prepared.allowed)
+        return {allowed:false,restricted:true,reason:'Lee needs to finish the prepared '+(prepared?prepared.errors[0]:'item validation')+' before photos. Your current work is preserved.'};
     }
     return result;
+  }
+  function reconcilePrepared(saved){
+    if(!saved||!queueVerified||!window.ECHPreparedContract)return saved;
+    var id=saved._draftId||saved._queueId||saved.queueId;
+    var current=items.find(function(it){return id&&(it._queueId||it.queueId||it.productId)===id;});
+    // Retired/completed work is still recoverable. Absence is not permission to
+    // replace it with a similarly named item, clear it, or discard its photos.
+    return current?window.ECHPreparedContract.reconcile(saved,current):saved;
   }
   function read(){ try{ items=JSON.parse(localStorage.getItem(KEY)||'[]'); }catch(e){ items=[]; } if(!Array.isArray(items)) items=[]; }
   function write(){ localStorage.setItem(KEY,JSON.stringify(items)); render(); }
@@ -116,6 +124,7 @@
     return (pinConnected?window.ECHPin.list():rpc('list_ech_ready_products',{p_token:token})).then(function(rows){
       var added=mergeRemote(rows);
       queueVerified=true;
+      if(window.ECHStudio.reconcilePrepared)window.ECHStudio.reconcilePrepared();
       status(added?added+' newly approved product'+(added===1?' is':'s are')+' ready.':'Queue is current. '+items.length+' product'+(items.length===1?'':'s')+' ready.');
       // A successful reconnect may have renewed this item's cloud permission.
       // Let recovery retry only after the server has accepted the queue session.
@@ -132,6 +141,10 @@
     // A receipt for this exact current job remains durable when queue sync
     // retires it. A stale device File must not trap an already-received job.
     var localError=null, cloudSaved=!!(window.ECHCloud&&window.ECHCloud.isSubmitted&&window.ECHCloud.isSubmitted());
+    if(!cloudSaved&&window.ECHCloud&&window.ECHCloud.checkReceipt&&window.ECHStudio.getState().reviewToken){
+      var terminal=await window.ECHCloud.checkReceipt();
+      if(terminal){window.ECHCloud.submitted();cloudSaved=true;}
+    }
     if(window.ECHStudio.waitForPhotos)await window.ECHStudio.waitForPhotos();
     // A failed device original/blob lookup must not prevent trying the
     // independent cloud backup. Never leave without a durable confirmation.
@@ -196,7 +209,7 @@
       status((openedNext?'Product opened, but saved-photo recovery needs a retry. Keep this item open; do not retake or clear its photos. ':'Could not switch safely. Your current photos are still here. ')+e.message,true);
     }finally{switching=false;lockWork(false);$('preparedSelect').disabled=false;updateSelection();}
   }
-  window.ECHQueue={preserveCurrent:preserveBeforeSwitch};
+  window.ECHQueue={preserveCurrent:preserveBeforeSwitch,reconcilePrepared:reconcilePrepared};
   $('loadPrepared').addEventListener('click',loadSelected);
   $('syncApprovals').addEventListener('click',function(){syncApprovals(false);});
   $('nextProduct').addEventListener('click',function(){
@@ -277,10 +290,34 @@
     if(!window.ECHStudio||this.disabled)return;
     var button=this, old=button.textContent, confirmed=false;
     var submittingQueueId=window.ECHStudio.getState()._draftId;
+    var submittingToken=window.ECHStudio.getState().reviewToken;
+    function sameSubmission(){var current=window.ECHStudio.getState();return current._draftId===submittingQueueId&&current.reviewToken===submittingToken;}
+    function acceptReceipt(accepted){
+      if(!accepted||!accepted.reviewId||!sameSubmission())throw new Error('The confirmed review does not match the active photo job. Your current photos are preserved.');
+      confirmed=true;
+      $('nextProduct').hidden=false;
+      if(window.ECHCloud)window.ECHCloud.submitted();
+      if(window.ECHStudio.showReceipt)window.ECHStudio.showReceipt();
+      removeSubmitted(submittingQueueId);
+      handoffMessage('Sent to Lee ✓ Review '+String(accepted.reviewId).slice(0,8)+' is waiting. Nothing was published to eBay.');
+      status('Sent to Lee for approval.');
+    }
+    async function existingReceipt(){
+      if(!window.ECHCloud||!window.ECHCloud.checkReceipt)return null;
+      if(!sameSubmission())throw new Error('The active product changed. Check the product name before sending.');
+      var receipt=await window.ECHCloud.checkReceipt();
+      if(!sameSubmission())throw new Error('The active product changed while checking its receipt. Your current photos are preserved.');
+      return receipt;
+    }
     button.disabled=true;button.textContent='Checking…';lockWork(true);$('preparedSelect').disabled=true;$('resetWork').disabled=true;
     try{
+      // An ambiguous prior response must be resolved before any upload or write.
+      // Completed jobs can no longer upload, but can still read their receipt.
+      var priorReceipt=await existingReceipt();
+      if(priorReceipt){acceptReceipt(priorReceipt);return;}
       if(window.ECHStudio.waitForPhotos)await window.ECHStudio.waitForPhotos();
-      if(window.ECHStudio.getState()._draftId!==submittingQueueId)throw new Error('The active product changed. Check the product name before sending.');
+      if(!sameSubmission())throw new Error('The active product changed. Check the product name before sending.');
+      if(window.ECHStudio.reconcilePrepared)window.ECHStudio.reconcilePrepared();
       var issues=window.ECHStudio.reviewIssues();if(issues.length)throw new Error(issues[0]);
       await preserveBeforeSwitch(false);
       var result=window.ECHStudio.prepareReview(), localReviewSaved=saveLocal(result.pack);
@@ -295,13 +332,7 @@
           button.textContent='Sending for review…';
         }
         var accepted=await postToHub(endpoint,result);
-        confirmed=true;
-        $('nextProduct').hidden=false;
-        if(window.ECHCloud)window.ECHCloud.submitted();
-        if(window.ECHStudio.showReceipt)window.ECHStudio.showReceipt();
-        removeSubmitted(submittingQueueId);
-        handoffMessage('Sent to Lee ✓ Review '+String(accepted.reviewId||'').slice(0,8)+' is waiting. Nothing was published to eBay.');
-        status('Sent to Lee for approval.');
+        acceptReceipt(accepted);
       }else{
         if(!localReviewSaved)throw new Error('Could not save the review on this device. Keep this item open and reconnect the Hub.');
         button.textContent='Opening…';
@@ -310,6 +341,9 @@
         else{handoffMessage('Saved for Lee on this device. The automatic Business Hub connection needs Lee.');status('Saved for Lee on this device.');}
       }
     }catch(err){
+      // A timeout can follow a committed server review. A fresh read is the
+      // only success evidence; never ask Paige to reupload an accepted item.
+      try{var recoveredReceipt=await existingReceipt();if(recoveredReceipt){acceptReceipt(recoveredReceipt);return;}}catch(receiptError){/* Preserve the original actionable failure; nothing is retired. */}
       if(err&&err.name==='AbortError')handoffMessage('Sending was canceled. Nothing was published.',true);
       else handoffMessage(/constraint|relation|SQL|database/i.test((err&&err.message)||'')?'The review could not be saved. Your photos remain here. Ask Lee to check the receiving service before trying again.':((err&&err.message)||'Could not send this review. Your photos remain here. Nothing was published.'),true);
     }finally{lockWork(false);$('preparedSelect').disabled=false;$('resetWork').disabled=false;button.disabled=confirmed;button.textContent=confirmed?'Sent to Lee ✓':old;}

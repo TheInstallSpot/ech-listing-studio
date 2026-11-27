@@ -3,7 +3,7 @@
  function ok(condition,test){if(!condition)throw new Error(test);tests.push({test:test,status:'PASS'});out.textContent=JSON.stringify(tests,null,2);}
  async function waitFor(fn){for(var i=0;i<150;i++){if(fn())return;await new Promise(function(r){setTimeout(r,100);});}throw new Error('Timed out waiting for workflow');}
  function edit(id,value){var el=document.getElementById(id);el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}));}
- async function photo(){var cv=document.createElement('canvas');cv.width=1800;cv.height=1700;var c=cv.getContext('2d');c.fillStyle='#123d68';c.fillRect(0,0,1800,1700);c.fillStyle='#d7a72d';c.fillRect(300,400,800,700);return new Promise(function(resolve){cv.toBlob(function(b){resolve(new File([b],'local-original.png',{type:'image/png'}));},'image/png');});}
+ async function photo(){var cv=document.createElement('canvas');cv.width=1800;cv.height=1700;var c=cv.getContext('2d'),pixels=c.createImageData(cv.width,cv.height);for(var i=0;i<pixels.data.length;i+=4){var n=i/4,x=n%cv.width,y=Math.floor(n/cv.width);pixels.data[i]=(x*7+y*3)%256;pixels.data[i+1]=(x+y*11)%256;pixels.data[i+2]=(x*13+y*17)%256;pixels.data[i+3]=255;}c.putImageData(pixels,0,0);return new Promise(function(resolve){cv.toBlob(function(b){resolve(new File([b],'real-camera-like.jpeg',{type:'image/jpeg'}));},'image/jpeg',.87);});}
  async function hash(blob){var data=await crypto.subtle.digest('SHA-256',await blob.arrayBuffer());return Array.from(new Uint8Array(data)).map(function(v){return v.toString(16).padStart(2,'0');}).join('');}
  async function record(phase){await fetch('/__test/evidence',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phase:phase,mode:'actual-app/actual-receiver/actual-SQL/local-storage',tests:tests})});}
  async function run(){tests=[];try{
@@ -20,7 +20,7 @@
   ok(document.getElementById('cloudSaveStatus').textContent.indexOf('archived securely')!==-1,'Actual JPEG/draft and full-original archive return durable cloud acknowledgment');
   var f=new FormData();f.append('mode','draft-read');var remote=await(await fetch(window.ECH_REVIEW_ENDPOINT,{method:'POST',headers:{Authorization:'Bearer '+initial.reviewToken},body:f})).json();ok(remote.originals.length===1&&remote.originals[0].sha256===await hash(original),'Full original is archived remotely with its exact fingerprint');
   var local=await window.ECHDraftStore.read(initial._draftId);ok(await hash(local.photos[0].original)===await hash(original),'Full-resolution original persists byte-for-byte on device');
-  var details={id:initial._draftId,sku:initial.sku,originalHash:await hash(original),text:window.ECHStudio.getState().pdesc};localStorage.setItem('ech-real-server-resume',JSON.stringify(details));
+  var normalizedHash=await hash(window.ECHStudio.exportPhotos()[0]);ok(normalizedHash===await hash(window.ECHStudio.exportPhotos()[0]),'Repeated JPEG export keeps identical bytes');var details={id:initial._draftId,sku:initial.sku,originalHash:await hash(original),normalizedHash:normalizedHash,text:window.ECHStudio.getState().pdesc};localStorage.setItem('ech-real-server-resume',JSON.stringify(details));
   ok(!window.ECHStudio.prepareReview().issues.length,'App packet is ready for exact server validation');
   await record('capture');out.textContent+='\nReady for reopen verification.';
  }catch(e){tests.push({test:e.message,status:'FAIL'});out.textContent=JSON.stringify(tests,null,2);await record('capture');}}
@@ -44,6 +44,7 @@
  if(phase==='resume')(async function(){try{
   await window.ECHCloud.ready();await window.ECHDrafts.ready();var expected=JSON.parse(localStorage.getItem('ech-real-server-resume')),snap=window.ECHStudio.snapshotDraft();
   ok(snap.id===expected.id&&snap.item.pdesc===expected.text,'Reopen recovers exact job and operator correction');ok(snap.photos.length===1&&await hash(snap.photos[0].original)===expected.originalHash,'Reopen restores original bytes with real server recovery');
+  ok(await hash(window.ECHStudio.exportPhotos()[0])===expected.normalizedHash,'Reopen preserves exact normalized JPEG hash and archived-original link');
   ok(!window.ECHStudio.getState().cond,'Reopened work requires fresh human condition confirmation');
   var renewedCondition=document.querySelector('input[name=cond][value=O2]');renewedCondition.checked=true;renewedCondition.dispatchEvent(new Event('change',{bubbles:true}));
   document.getElementById('navNext').click();ok(document.getElementById('sendToLee').closest('.panel').dataset.step==='2','Paige can send directly from Photos without research or shipping forms');

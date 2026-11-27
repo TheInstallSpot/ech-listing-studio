@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url),contract=require('../prepared-contract.js'),core=require('../builder-core.js');
+const item={_queueId:'job-1',sku:'SAV-MATRIX',productId:'SAV-MATRIX',brand:'Savant',part:'SLN-88VLC4K-00',what:'Matrix',title:'Savant Matrix',sold:'Set of 7',availableQuantity:1,fulfillment:'ech',box:['Matrix plus six receivers'],ver:['Owner confirms exact model']};
+assert.equal(contract.validate(item,core).allowed,true);
+assert.equal(contract.validate({...item,sold:'Bundle'},core).allowed,false);
+assert.equal(contract.validate({...item,_preparationError:'sale-unit approval mismatch'},core).allowed,false);
+assert.equal(contract.validate(item,core,{...item,saleUnit:'set',saleUnitLabel:'Set of 7'}).allowed,false);
+assert.equal(contract.validate(item,core,{...item,saleUnit:'kit',saleUnitLabel:'Set of 7'}).allowed,true);
+const saved={...item,_draftId:'job-1',sold:'Each',part:'HRX-4KVLC40',cond:'O2',packaging:'other',defects:'Marked case',serialNumber:'LOCAL-ONLY',pdesc:'Operator correction',hook:'Operator hook',quantityConfirmed:true,photoSlots:[0,1,2]};
+const result=contract.reconcile(saved,item);
+assert.equal(result.part,item.part);assert.equal(result.sold,'Set of 7');assert.equal(result.quantityConfirmed,false);
+for(const key of ['cond','packaging','defects','serialNumber','pdesc','hook','photoSlots'])assert.deepEqual(result[key],saved[key]);
+assert.throws(()=>contract.reconcile(saved,{...item,_queueId:'job-2'}),/different physical/);
+assert.equal(contract.validate({...item,what:'A'.repeat(100)},core).allowed,false);
+console.log('PASS prepared identity/unit/quantity/title preflight; hidden unit mismatch blocked; operator corrections retained; same-SKU jobs isolated');

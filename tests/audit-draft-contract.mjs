@@ -27,8 +27,8 @@ await assert.rejects(c.window.ECHCloud.flush(),/Newer cloud work/);assert.equal(
 assert.match(created.find(e=>e.id==='cloudSaveStatus').textContent,/Newer cloud work/);
 console.log('PASS partial revisions, lost-reply automatic recovery, interrupted-network retry and real concurrent-conflict protection; originals retained');
 const queue=fs.readFileSync(new URL('../agent-queue.js',import.meta.url),'utf8');const auth=queue.slice(queue.indexOf('  function authorization('),queue.indexOf('  function read('));
-const a={window:{ECHAuthorization:{check:()=>({allowed:true})},ECHCore:createRequire(import.meta.url)('../builder-core.js')}};
+const a={window:{ECHAuthorization:{check:()=>({allowed:true})},ECHCore:createRequire(import.meta.url)('../builder-core.js'),ECHPreparedContract:createRequire(import.meta.url)('../prepared-contract.js')}};
 vm.createContext(a);vm.runInContext(auth,a);
 assert.equal(a.authorization({brand:'Fixture',part:'QA-100',what:'A'.repeat(100),sold:'Each'}).allowed,false);
-assert.equal(a.authorization({brand:'Fixture',part:'QA-100',what:'Speaker',sold:'Each'}).allowed,true);
+assert.equal(a.authorization({brand:'Fixture',part:'QA-100',sku:'QA-100',productId:'qa-job',title:'Fixture QA-100 Speaker',ver:['Exact fixture label checked'],what:'Speaker',sold:'Each',availableQuantity:1,fulfillment:'ech',isPassive:true,box:['One speaker']}).allowed,true);
 console.log('PASS unknown overlong prepared title blocks before capture; ordinary title remains available');

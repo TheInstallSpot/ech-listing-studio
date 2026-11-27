@@ -64,7 +64,8 @@
     return safeNamePiece(sku) + '-' + String(index+1).padStart(2,'0') + (index===0?'-main':'') + (Number.isInteger(photos[index]?.slot)?'-slot'+photos[index].slot:'') + '.jpeg';
   }
 
-  function normalizePhoto(f){ // returns a plain RGB JPEG with no added text or artwork
+  function normalizePhoto(f){ // Normalize once; recovered JPEG bytes must keep their original linkage.
+    if(f.normalized)return f.normalized;
     var sourceW=f.img.naturalWidth, sourceH=f.img.naturalHeight;
     var longest=Math.max(sourceW,sourceH);
     var scale=longest>MAX_PHOTO_SIDE?MAX_PHOTO_SIDE/longest:1;
@@ -75,7 +76,7 @@
     g.fillStyle='#ffffff';
     g.fillRect(0,0,cv.width,cv.height);
     g.drawImage(f.img,0,0,cv.width,cv.height);
-    return {
+    return f.normalized={
       dataUrl:cv.toDataURL('image/jpeg',0.93),
       w:cv.width,
       h:cv.height,
@@ -540,12 +541,20 @@
   }
   document.addEventListener('ech:loadPrepared', function(e){ loadPreparedItem(e.detail||{}); });
   window.ECHStudio = {
-    snapshotDraft:function(){var item=state();delete item.reviewToken;item.localCondition=$('input[name=cond]:checked')?.value || '';return {id:draftId,updatedAt:new Date().toISOString(),item:item,extraOriginals:unreadableOriginals.slice(),photos:photos.map(function(f,index){return {name:f.name,original:f.original||new File([dataUrlToBlob(normalizePhoto(f).dataUrl)],photoName(index),{type:"image/jpeg"}),originalAvailable:!!f.original&&f.originalAvailable!==false};})};},
-    restoreLocalDraft:async function(record){var current=state();if(record.id!==draftId||record.item.sku!==current.sku)throw new Error("Local draft belongs to another item.");var item=Object.assign({},record.item,{reviewToken:current.reviewToken,_draftId:draftId});await window.ECHStudio.restoreCloud(item,record.photos.map(function(f){return f.original;}),true);photos.forEach(function(f,i){f.originalAvailable=record.photos[i].originalAvailable;});
+    snapshotDraft:function(){var item=state();delete item.reviewToken;item.localCondition=$('input[name=cond]:checked')?.value || '';return {id:draftId,updatedAt:new Date().toISOString(),item:item,extraOriginals:unreadableOriginals.slice(),photos:photos.map(function(f,index){return {name:f.name,original:f.original||new File([dataUrlToBlob(normalizePhoto(f).dataUrl)],photoName(index),{type:"image/jpeg"}),originalAvailable:!!f.original&&f.originalAvailable!==false,normalized:new File([dataUrlToBlob(normalizePhoto(f).dataUrl)],photoName(index),{type:'image/jpeg'})};})};},
+    restoreLocalDraft:async function(record){var current=state();if(record.id!==draftId||record.item.sku!==current.sku)throw new Error("Local draft belongs to another item.");var item=Object.assign({},record.item,{reviewToken:current.reviewToken,_draftId:draftId});await window.ECHStudio.restoreCloud(item,record.photos.map(function(f){return f.original;}),true,record.photos.map(function(f){return f.originalAvailable!==false;}),record.photos.map(function(f){return f.normalized||null;}));photos.forEach(function(f,i){f.originalAvailable=record.photos[i].originalAvailable;});
       if(record.item.photoSlots?.some(Number.isInteger)){
         $$('input[name=cond]').forEach(function(input){input.checked=input.value===record.item.localCondition;});
         if(cond())go(2);
       }unreadableOriginals=(record.extraOriginals||[]).slice();hasCorrections=true;drawShots();},
+    reconcilePrepared:function(){
+      if(!window.ECHQueue||!window.ECHQueue.reconcilePrepared)return;
+      var current=state(),rawCondition=$('input[name=cond]:checked')?.value||'',merged=window.ECHQueue.reconcilePrepared(current);
+      if(JSON.stringify(current)===JSON.stringify(merged))return;
+      loadPreparedItem(merged);
+      $$('input[name=cond]').forEach(function(input){input.checked=input.value===rawCondition;});
+      hasCorrections=true;onChange();drawShots();
+    },
     getState: state,
     showReceipt:function(){receiptView(true);go(2);$('#nextProduct').hidden=false;},
     exportReferencePhotos:async function(){return Promise.all(photos.map(referenceFile));},
@@ -560,12 +569,16 @@
     unreadablePhotoCount:function(){return unreadableOriginals.length;},
     waitForPhotos:waitForPhotos,
     exportPhotos: function(){return photos.map(function(f,index){var r=normalizePhoto(f);return new File([dataUrlToBlob(r.dataUrl)],photoName(index),{type:'image/jpeg'});});},
-    restoreCloud: async function(s,files,forceLocal,originalFlags){
+    restoreCloud: async function(s,files,forceLocal,originalFlags,normalizedFiles){
       var generation=productGeneration, current=state();
+      if(window.ECHQueue&&window.ECHQueue.reconcilePrepared)s=window.ECHQueue.reconcilePrepared(s);
       if(s.sku!==current.sku||s.reviewToken!==current.reviewToken)throw new Error('Saved product does not match this item.');
-      var restored=await Promise.all(files.map(function(file){return new Promise(function(resolve,reject){
-        var url=URL.createObjectURL(file),im=new Image();
-        im.onload=function(){URL.revokeObjectURL(url);resolve({name:file.name,img:im,original:forceLocal||(originalFlags&&originalFlags[files.indexOf(file)])?file:null,originalAvailable:!!forceLocal||!!(originalFlags&&originalFlags[files.indexOf(file)])});};
+      var restored=await Promise.all(files.map(async function(file,index){
+        var normalized=normalizedFiles&&normalizedFiles[index],cleanData=null;
+        if(normalized)cleanData=await new Promise(function(resolve,reject){var reader=new FileReader();reader.onload=function(){resolve(reader.result);};reader.onerror=reader.onabort=function(){reject(new Error('Cannot recover saved JPEG bytes'));};reader.readAsDataURL(normalized);});
+        return new Promise(function(resolve,reject){
+        var url=URL.createObjectURL(normalized||file),im=new Image();
+        im.onload=function(){URL.revokeObjectURL(url);var hasOriginal=originalFlags?originalFlags[index]===true:!!forceLocal;resolve({name:file.name,img:im,original:hasOriginal?file:null,originalAvailable:hasOriginal,normalized:cleanData?{dataUrl:cleanData,w:im.naturalWidth,h:im.naturalHeight,small:Math.max(im.naturalWidth,im.naturalHeight)<MIN_RECOMMENDED_SIDE}:null});};
         im.onerror=function(){URL.revokeObjectURL(url);reject(new Error('Cannot recover photo'));};im.src=url;
       });}));
       if(generation!==productGeneration)return;
